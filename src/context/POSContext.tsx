@@ -31,6 +31,7 @@ import {
   saveAuditLogToFirestore,
   saveStockMovementToFirestore,
   saveProductToFirestore,
+  deleteProductFromFirestore,
   saveCustomerToFirestore,
   saveSupplierToFirestore,
   saveCannabisLotToFirestore,
@@ -39,6 +40,7 @@ import {
   saveShopSettingsToFirestore,
   saveUserToFirestore,
   deleteUserFromFirestore,
+  deleteSupplierFromFirestore,
 } from '../lib/firestoreService';
 
 interface POSContextType {
@@ -92,6 +94,14 @@ interface POSContextType {
     prescriptionRef?: string
   ) => SaleOrder | null;
   
+  addProduct: (productData: Omit<Product, 'id'>) => void;
+  updateProduct: (id: string, updated: Partial<Product>) => void;
+  deleteProduct: (id: string) => boolean;
+
+  addSupplier: (supplierData: Omit<Supplier, 'id'>) => void;
+  updateSupplier: (id: string, updated: Partial<Supplier>) => void;
+  deleteSupplier: (id: string) => boolean;
+
   adjustStock: (
     productId: string,
     newQuantity: number,
@@ -307,6 +317,72 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers((prev) => prev.filter((u) => u.id !== id));
     deleteUserFromFirestore(id);
     addAuditLog('DELETE_USER', 'settings', `ลบผู้ใช้งาน: ${target?.name || id}`);
+    return true;
+  };
+
+  // Product Operations
+  const addProduct = (productData: Omit<Product, 'id'>) => {
+    const newProduct: Product = {
+      ...productData,
+      id: 'prod-' + Date.now(),
+    };
+    setProducts((prev) => [newProduct, ...prev]);
+    saveProductToFirestore(newProduct);
+    addAuditLog('ADD_PRODUCT', 'inventory', `เพิ่มสินค้า/เมนูใหม่: ${newProduct.name} (${newProduct.category})`);
+  };
+
+  const updateProduct = (id: string, updated: Partial<Product>) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const newP = { ...p, ...updated };
+          saveProductToFirestore(newP);
+          return newP;
+        }
+        return p;
+      })
+    );
+    addAuditLog('UPDATE_PRODUCT', 'inventory', `แก้ไขข้อมูลสินค้า/เมนู ID: ${id}`);
+  };
+
+  const deleteProduct = (id: string): boolean => {
+    const target = products.find((p) => p.id === id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    deleteProductFromFirestore(id);
+    addAuditLog('DELETE_PRODUCT', 'inventory', `ลบสินค้า/เมนู: ${target?.name || id}`);
+    return true;
+  };
+
+  // Supplier Operations
+  const addSupplier = (supplierData: Omit<Supplier, 'id'>) => {
+    const newSupplier: Supplier = {
+      ...supplierData,
+      id: 'sup-' + Date.now(),
+    };
+    setSuppliers((prev) => [newSupplier, ...prev]);
+    saveSupplierToFirestore(newSupplier);
+    addAuditLog('ADD_SUPPLIER', 'inventory', `เพิ่มซัพพลายเออร์ใหม่: ${newSupplier.companyName} (${newSupplier.code})`);
+  };
+
+  const updateSupplier = (id: string, updated: Partial<Supplier>) => {
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const newS = { ...s, ...updated };
+          saveSupplierToFirestore(newS);
+          return newS;
+        }
+        return s;
+      })
+    );
+    addAuditLog('UPDATE_SUPPLIER', 'inventory', `แก้ไขข้อมูลซัพพลายเออร์ ID: ${id}`);
+  };
+
+  const deleteSupplier = (id: string): boolean => {
+    const target = suppliers.find((s) => s.id === id);
+    setSuppliers((prev) => prev.filter((s) => s.id !== id));
+    deleteSupplierFromFirestore(id);
+    addAuditLog('DELETE_SUPPLIER', 'inventory', `ลบซัพพลายเออร์: ${target?.companyName || id}`);
     return true;
   };
 
@@ -776,6 +852,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setShopSettings,
         products,
         setProducts,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        addSupplier,
+        updateSupplier,
+        deleteSupplier,
         cannabisLots,
         setCannabisLots,
         kratomBatches,

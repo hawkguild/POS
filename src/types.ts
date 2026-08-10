@@ -240,6 +240,8 @@ export interface KitchenOrder {
 export interface ShopSettings {
   shopName: string;
   taxId: string;
+  promptPayId?: string;
+  promptPayName?: string;
   address: string;
   phone: string;
   cannabisLicenseNo: string;

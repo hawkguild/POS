@@ -11,6 +11,8 @@ export const INITIAL_USERS: User[] = [
 export const INITIAL_SHOP_SETTINGS: ShopSettings = {
   shopName: 'THAI MULTI BUSINESS CENTER (กัญชา + กระท่อม + อาหาร)',
   taxId: '0105568192083',
+  promptPayId: '0105568192083',
+  promptPayName: 'บจก. ไทย มัลติ บิสซิเนส',
   address: '88/19 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
   phone: '02-719-8888',
   cannabisLicenseNo: 'นภ.102/2569 (ใบอนุญาตสมุนไพรควบคุม)',

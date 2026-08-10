@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { PaymentModal } from './PaymentModal';
 import { ReceiptModal } from './ReceiptModal';
+import { AddEditProductModal } from '../inventory/AddEditProductModal';
+import { PromptPayQRCard } from './PromptPayQRCard';
 
 export const POSTerminal: React.FC = () => {
   const {
@@ -59,6 +61,11 @@ export const POSTerminal: React.FC = () => {
   // Payment & Receipt Modals
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
+  const [showQuickQrModal, setShowQuickQrModal] = useState(false);
+  const [quickQrRefNo, setQuickQrRefNo] = useState('');
+
+  // Add Menu Modal State
+  const [isAddMenuModalOpen, setIsAddMenuModalOpen] = useState(false);
 
   // Filter Products
   const filteredProducts = products.filter((p) => {
@@ -146,6 +153,16 @@ export const POSTerminal: React.FC = () => {
               สแกน
             </button>
           </form>
+
+          {/* Add Menu Button for Admin */}
+          <button
+            onClick={() => setIsAddMenuModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-xs flex items-center space-x-1 flex-shrink-0"
+            title="เพิ่มเมนู / สินค้าใหม่พร้อมรูปภาพ"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">เพิ่มเมนู</span>
+          </button>
         </div>
 
         {/* 3 Verticals + All Category Filter Buttons */}
@@ -511,11 +528,25 @@ export const POSTerminal: React.FC = () => {
           </div>
 
           {/* Quick Payment Action Buttons */}
-          <div className="pt-2">
+          <div className="pt-2 grid grid-cols-5 gap-2">
+            <button
+              disabled={cart.length === 0 || (hasCannabisInCart && !ageVerified)}
+              onClick={() => setShowQuickQrModal(true)}
+              className={`col-span-2 py-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 border transition ${
+                cart.length === 0 || (hasCannabisInCart && !ageVerified)
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 shadow-2xs'
+              }`}
+              title="แสดง QR พร้อมเพย์สำหรับให้ลูกค้าสแกน"
+            >
+              <QrCode className="w-4 h-4 text-blue-600" />
+              <span>QR พร้อมเพย์</span>
+            </button>
+
             <button
               disabled={cart.length === 0 || (hasCannabisInCart && !ageVerified)}
               onClick={() => setShowPaymentModal(true)}
-              className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition ${
+              className={`col-span-3 py-3 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition ${
                 cart.length === 0 || (hasCannabisInCart && !ageVerified)
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
@@ -668,6 +699,61 @@ export const POSTerminal: React.FC = () => {
           order={completedOrder}
           onClose={() => setCompletedOrder(null)}
         />
+      )}
+
+      {/* Add Menu Modal */}
+      <AddEditProductModal
+        isOpen={isAddMenuModalOpen}
+        onClose={() => setIsAddMenuModalOpen(false)}
+      />
+
+      {/* Standalone Quick PromptPay QR Modal */}
+      {showQuickQrModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 p-5 max-w-md w-full text-slate-800 shadow-2xl relative space-y-4 my-auto">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <QrCode className="w-5 h-5 text-blue-600" />
+                <h3 className="font-extrabold text-slate-900 text-base">
+                  สแกนชำระเงิน Thai QR PromptPay
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowQuickQrModal(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <PromptPayQRCard
+              amount={netTotal}
+              promptPayId={shopSettings.promptPayId || shopSettings.taxId || '0105568192083'}
+              merchantName={shopSettings.promptPayName || shopSettings.shopName}
+              refNo={quickQrRefNo}
+              onRefNoChange={setQuickQrRefNo}
+            />
+
+            <div className="pt-2 flex justify-between space-x-2">
+              <button
+                onClick={() => setShowQuickQrModal(false)}
+                className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+              >
+                ปิดหน้าจอ
+              </button>
+              <button
+                onClick={() => {
+                  setShowQuickQrModal(false);
+                  setShowPaymentModal(true);
+                }}
+                className="w-2/3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-md transition"
+              >
+                <span>ไปที่หน้าชำระเงินหลัก</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

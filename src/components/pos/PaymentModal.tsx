@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { usePOS } from '../../context/POSContext';
 import { PaymentMethod, PaymentBreakdown, Customer, SaleOrder } from '../../types';
+import { PromptPayQRCard } from './PromptPayQRCard';
 import {
   DollarSign,
   QrCode,
@@ -296,29 +297,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* PROMPTPAY QR UI */}
             {activeMethod === 'promptpay' && (
-              <div className="flex flex-col items-center justify-center space-y-3 text-center py-2">
-                <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-200 inline-block">
-                  {/* Generated QR representation */}
-                  <div className="w-40 h-40 bg-slate-900 rounded-xl flex flex-col items-center justify-center text-white p-2">
-                    <QrCode className="w-20 h-20 text-emerald-400" />
-                    <span className="text-[10px] text-slate-400 mt-1">PromptPay QR</span>
-                    <span className="text-xs font-mono font-bold text-emerald-300">
-                      ฿{netTotal.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-800 text-xs">สแกนชำระเงินด้วย PromptPay</p>
-                  <p className="text-slate-500 text-[11px]">
-                    เลขประจำตัวผู้เสียภาษี: {shopSettings.taxId} ({shopSettings.shopName})
-                  </p>
-                </div>
-                <input
-                  type="text"
-                  placeholder="รหัสอ้างอิงสลิป / Ref Slip ID (ถ้ามี)"
-                  value={refNo}
-                  onChange={(e) => setRefNo(e.target.value)}
-                  className="w-full max-w-md bg-white text-slate-800 text-xs p-2.5 rounded-xl border border-slate-300 font-mono"
+              <div className="py-2">
+                <PromptPayQRCard
+                  amount={netTotal}
+                  promptPayId={shopSettings.promptPayId || shopSettings.taxId || '0105568192083'}
+                  merchantName={shopSettings.promptPayName || shopSettings.shopName}
+                  refNo={refNo}
+                  onRefNoChange={setRefNo}
                 />
               </div>
             )}
@@ -330,7 +315,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1 text-slate-700 shadow-xs">
                   <p className="font-bold text-emerald-700">ธนาคารกสิกรไทย (KBANK)</p>
                   <p className="font-mono">เลขบัญชี: 128-8-99900-1</p>
-                  <p>ชื่อบัญชี: บจก. ไทย มัลติ บิสซิเนส</p>
+                  <p>ชื่อบัญชี: {shopSettings.promptPayName || shopSettings.shopName}</p>
                 </div>
                 <input
                   type="text"
@@ -358,7 +343,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* SPLIT PAYMENT UI */}
             {activeMethod === 'split' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="font-semibold text-slate-800">แบ่งชำระหลายช่องทาง:</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -387,6 +372,21 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     />
                   </div>
                 </div>
+
+                {splitPromptPay > 0 && (
+                  <div className="pt-2">
+                    <p className="text-[11px] font-bold text-slate-700 mb-2 text-center">
+                      สแกนชำระเงินส่วน QR พร้อมเพย์ (฿{splitPromptPay.toLocaleString()}):
+                    </p>
+                    <PromptPayQRCard
+                      amount={splitPromptPay}
+                      promptPayId={shopSettings.promptPayId || shopSettings.taxId || '0105568192083'}
+                      merchantName={shopSettings.promptPayName || shopSettings.shopName}
+                      refNo={refNo}
+                      onRefNoChange={setRefNo}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

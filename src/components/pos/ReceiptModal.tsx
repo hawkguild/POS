@@ -102,6 +102,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
             <h2 className="font-extrabold text-sm uppercase text-slate-900 tracking-tight">
               {shopSettings.shopName}
             </h2>
+            {shopSettings.receiptHeader && (
+              <p className="text-[10px] text-emerald-800 font-bold whitespace-pre-line bg-emerald-50/70 p-1 rounded border border-emerald-200/60 my-1">
+                {shopSettings.receiptHeader}
+              </p>
+            )}
             <p className="text-[10px] text-slate-600">{shopSettings.address}</p>
             <p className="text-[10px] text-slate-600 font-mono">
               เลขผู้เสียภาษี: {shopSettings.taxId} | โทร: {shopSettings.phone}

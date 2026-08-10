@@ -286,10 +286,26 @@ export async function saveUserToFirestore(user: User) {
   }
 }
 
+export async function deleteProductFromFirestore(productId: string) {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.PRODUCTS, productId));
+  } catch (err) {
+    console.error('Failed to delete product from Firestore:', err);
+  }
+}
+
 export async function deleteUserFromFirestore(userId: string) {
   try {
     await deleteDoc(doc(db, COLLECTIONS.USERS, userId));
   } catch (err) {
     console.error('Failed to delete user from Firestore:', err);
+  }
+}
+
+export async function deleteSupplierFromFirestore(supplierId: string) {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.SUPPLIERS, supplierId));
+  } catch (err) {
+    console.error('Failed to delete supplier from Firestore:', err);
   }
 }

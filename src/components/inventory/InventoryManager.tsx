@@ -14,12 +14,19 @@ import {
   Check,
   X,
   FileSpreadsheet,
+  Trash2,
+  ImageIcon,
 } from 'lucide-react';
+import { AddEditProductModal } from './AddEditProductModal';
 
 export const InventoryManager: React.FC = () => {
-  const { products, setProducts, adjustStock, stockMovements, currentUser } = usePOS();
+  const { products, deleteProduct, adjustStock, stockMovements, currentUser } = usePOS();
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Add/Edit Product Modal State
+  const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+  const [productToEditModal, setProductToEditModal] = useState<Product | null>(null);
 
   // Stock Adjustment Modal
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -33,6 +40,22 @@ export const InventoryManager: React.FC = () => {
       p.code.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const handleOpenAddModal = () => {
+    setProductToEditModal(null);
+    setIsAddEditModalOpen(true);
+  };
+
+  const handleOpenEditModal = (prod: Product) => {
+    setProductToEditModal(prod);
+    setIsAddEditModalOpen(true);
+  };
+
+  const handleDeleteProduct = (prod: Product) => {
+    if (window.confirm(`คุณต้องการลบรายการเมนู/สินค้า "${prod.name}" ใช่หรือไม่?`)) {
+      deleteProduct(prod.id);
+    }
+  };
 
   const handleSaveStockAdjustment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +86,21 @@ export const InventoryManager: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900">
-              ระบบคลังสินค้าเเละการปรับปรุงสต็อก (Multi-Business Warehouse)
+              ระบบคลังสินค้าเเละจัดการเมนู (Multi-Business Warehouse & Menu Management)
             </h2>
             <p className="text-xs text-slate-600 mt-1">
-              จัดกลุ่มคลังสินค้าตามธุรกิจ (🌿 กัญชา | 🥤 กระท่อม | 🍜 อาหาร | 📦 สินค้าทั่วไป) พร้อมระบบบันทึกเหตุผลกำกับ
+              จัดกลุ่มคลังสินค้าตามธุรกิจ (🌿 กัญชา | 🥤 กระท่อม | 🍜 อาหาร | 📦 สินค้าทั่วไป) พร้อมระบบเพิ่มเมนูและแนบรูปภาพ
             </p>
           </div>
         </div>
+
+        <button
+          onClick={handleOpenAddModal}
+          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          <span>เพิ่มเมนู / สินค้าใหม่ (Add Menu)</span>
+        </button>
       </div>
 
       {/* Category Tabs & Search */}
@@ -163,7 +194,35 @@ export const InventoryManager: React.FC = () => {
                 return (
                   <tr key={prod.id} className="hover:bg-slate-50 transition">
                     <td className="p-3 font-mono text-slate-500">{prod.code}</td>
-                    <td className="p-3 font-bold text-slate-900">{prod.name}</td>
+                    <td className="p-3">
+                      <div className="flex items-center space-x-3">
+                        {prod.image ? (
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 text-slate-400 flex-shrink-0 text-xs">
+                            {prod.category === 'cannabis'
+                              ? '🌿'
+                              : prod.category === 'kratom'
+                              ? '🥤'
+                              : prod.category === 'food'
+                              ? '🍜'
+                              : '📦'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-slate-900 text-xs">{prod.name}</div>
+                          {prod.subcategory && (
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              {prod.subcategory}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     <td className="p-3">
                       <span className="capitalize px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-medium">
                         {prod.category}
@@ -192,16 +251,36 @@ export const InventoryManager: React.FC = () => {
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => {
-                          setEditingProduct(prod);
-                          setNewQty(prod.stockQuantity);
-                        }}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200 inline-flex items-center space-x-1 shadow-2xs transition"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>ปรับสต็อก</span>
-                      </button>
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <button
+                          onClick={() => handleOpenEditModal(prod)}
+                          title="แก้ไขรายละเอียดและรูปภาพเมนู"
+                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 inline-flex items-center space-x-1 transition"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>แก้ไขเมนู</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditingProduct(prod);
+                            setNewQty(prod.stockQuantity);
+                          }}
+                          title="ปรับจำนวนสต็อก"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 inline-flex items-center space-x-1 transition"
+                        >
+                          <Package className="w-3.5 h-3.5 text-slate-600" />
+                          <span>ปรับสต็อก</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteProduct(prod)}
+                          title="ลบรายการสินค้า"
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 p-1 rounded-lg text-xs font-semibold border border-rose-200 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -210,6 +289,13 @@ export const InventoryManager: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add / Edit Product Modal */}
+      <AddEditProductModal
+        isOpen={isAddEditModalOpen}
+        onClose={() => setIsAddEditModalOpen(false)}
+        productToEdit={productToEditModal}
+      />
 
       {/* Adjust Stock Modal */}
       {editingProduct && (
