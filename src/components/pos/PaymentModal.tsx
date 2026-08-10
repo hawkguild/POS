@@ -31,9 +31,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const { cart, shopSettings, completeCheckout } = usePOS();
 
   // Order Details
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
-  const netTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
+  const subtotal = (cart || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const totalDiscount = (cart || []).reduce((acc, item) => acc + item.discount, 0);
+  const netTotal = (cart || []).reduce((acc, item) => acc + item.subtotal, 0);
 
   // States
   const [activeMethod, setActiveMethod] = useState<PaymentMethod>('cash');

@@ -33,7 +33,7 @@ export const InventoryManager: React.FC = () => {
   const [newQty, setNewQty] = useState<number>(0);
   const [reason, setReason] = useState('สินค้าเสียหาย/ชื้น');
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = (products || []).filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

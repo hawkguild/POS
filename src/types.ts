@@ -65,7 +65,12 @@ export interface KratomBatch {
   producedVolumeLiters: number;
   yieldBottles: number;
   bottleSizeMl: number;
-  leafWeightGrams: number; // น้ำหนักใบกระท่อมที่ใช้
+  leafWeightGrams: number; // น้ำหนักใบกระท่อมที่ใช้ (g)
+  leafOrigin?: string; // แหล่งที่มา/แหล่งปลูก e.g. สุราษฎร์ธานี
+  processingDate?: string; // วันที่แปรรูป/ต้มสกัด
+  processingWeightKg?: number; // น้ำหนักใบนวัตกรรมแปรรูป (kg)
+  supplierName?: string; // ผู้จัดส่งวัตถุดิบ/ฟาร์ม
+  notes?: string; // หมายเหตุการแปรรูป
   totalCostThb: number;
   costPerLiterThb: number;
   costPerBottleThb: number;

@@ -109,7 +109,7 @@ export const SettingsManager: React.FC = () => {
             </div>
             <p className="text-xs text-indigo-200 mt-1">
               แก้ไขชื่อร้านค้า, โลโก้/หัวบิล, เลขประจำตัวผู้เสียภาษี, บัญชี PromptPay QR
-              เเละใบอนุญาตตามกฎหมาย
+              เเละใบอนุญาตตามกฎหมาย (ซิงค์ข้อมูลเรียลไทม์ไปยังทุกอุปกรณ์พร้อมกันผ่าน Firebase Cloud)
             </p>
           </div>
         </div>

@@ -20,7 +20,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
-  const { currentUser, setCurrentUser, users, shopSettings, resetToDemoData, auditLogs, logout } = usePOS();
+  const { currentUser, setCurrentUser, users, shopSettings, resetToDemoData, auditLogs, logout, isCloudSynced } = usePOS();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -69,13 +69,23 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                 <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-wide">
                   {shopSettings.shopName || 'THAI MULTI BUSINESS POS'}
                 </h1>
                 <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
                   B.E. 2569 Compliant
                 </span>
+                {isCloudSynced ? (
+                  <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full border border-emerald-300 font-bold flex items-center gap-1 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    ซิงค์เรียลไทม์ 2+ อุปกรณ์ (Cloud)
+                  </span>
+                ) : (
+                  <span className="bg-amber-100 text-amber-800 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 font-medium animate-pulse">
+                    กำลังเชื่อมต่อ Cloud Sync...
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1 font-medium">
                 <span>🌿 กัญชาสมุนไพรควบคุม</span>
@@ -190,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     สลับบทบาทผู้ใช้งาน (Permission Switcher)
                   </div>
                   <div className="space-y-1 mt-1">
-                    {users.map((u) => (
+                    {(users || []).map((u) => (
                       <button
                         key={u.id}
                         onClick={() => {

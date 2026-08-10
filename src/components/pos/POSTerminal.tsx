@@ -17,6 +17,7 @@ import {
   DollarSign,
   ArrowRight,
   Barcode,
+  Camera,
   Sparkles,
   FileText,
   AlertCircle,
@@ -26,6 +27,7 @@ import { PaymentModal } from './PaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { AddEditProductModal } from '../inventory/AddEditProductModal';
 import { PromptPayQRCard } from './PromptPayQRCard';
+import { CameraScannerModal } from '../common/CameraScannerModal';
 
 export const POSTerminal: React.FC = () => {
   const {
@@ -68,7 +70,7 @@ export const POSTerminal: React.FC = () => {
   const [isAddMenuModalOpen, setIsAddMenuModalOpen] = useState(false);
 
   // Filter Products
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = (products || []).filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -78,14 +80,14 @@ export const POSTerminal: React.FC = () => {
   });
 
   // Calculate Cart Totals
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
-  const netTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
+  const subtotal = (cart || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const totalDiscount = (cart || []).reduce((acc, item) => acc + item.discount, 0);
+  const netTotal = (cart || []).reduce((acc, item) => acc + item.subtotal, 0);
   const taxAmount = (netTotal * shopSettings.vatPercent) / (100 + shopSettings.vatPercent);
 
   // Cannabis Items in Cart check
-  const hasCannabisInCart = cart.some((item) => item.category === 'cannabis');
-  const totalCannabisWeightGrams = cart
+  const hasCannabisInCart = (cart || []).some((item) => item.category === 'cannabis');
+  const totalCannabisWeightGrams = (cart || [])
     .filter((item) => item.category === 'cannabis')
     .reduce((acc, item) => acc + item.quantity, 0);
 
@@ -383,7 +385,7 @@ export const POSTerminal: React.FC = () => {
               <option value="" className="bg-white">
                 -- เลือกลูกค้า / สมาชิก (สะสมแต้ม) --
               </option>
-              {customers.map((c) => (
+              {(customers || []).map((c) => (
                 <option key={c.id} value={c.id} className="bg-white">
                   {c.name} ({c.phone}) - {c.points} แต้ม
                 </option>
@@ -604,7 +606,7 @@ export const POSTerminal: React.FC = () => {
                   onChange={(e) => setSelectedLotId(e.target.value)}
                   className="w-full bg-slate-50 text-slate-800 p-2 rounded-xl border border-slate-200 text-xs font-medium"
                 >
-                  {cannabisLots
+                  {(cannabisLots || [])
                     .filter((l) => l.productId === selectedCannabisProduct.id)
                     .map((lot) => (
                       <option key={lot.id} value={lot.lotNumber}>

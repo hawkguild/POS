@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onSnapshot, doc, collection } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import {
   Product,
   CannabisLot,
@@ -41,9 +43,13 @@ import {
   saveUserToFirestore,
   deleteUserFromFirestore,
   deleteSupplierFromFirestore,
+  COLLECTIONS,
+  OperationType,
+  handleFirestoreError,
 } from '../lib/firestoreService';
 
 interface POSContextType {
+  isCloudSynced: boolean;
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, passwordOrPin: string) => boolean;
   logout: () => void;
@@ -160,6 +166,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // States
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
     getStored('auth_status', false)
   );
@@ -170,7 +177,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = getStored<User | null>('current_user', null);
     return saved || INITIAL_USERS[0];
   });
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => getStored('settings', INITIAL_SHOP_SETTINGS));
+  const [shopSettings, setShopSettingsInternal] = useState<ShopSettings>(() => getStored('settings', INITIAL_SHOP_SETTINGS));
+
+  const setShopSettings: React.Dispatch<React.SetStateAction<ShopSettings>> = (value) => {
+    setShopSettingsInternal((prev) => {
+      const updated = typeof value === 'function' ? (value as any)(prev) : value;
+      saveShopSettingsToFirestore(updated);
+      return updated;
+    });
+  };
+
   const [products, setProducts] = useState<Product[]>(() => getStored('products', INITIAL_PRODUCTS));
   const [cannabisLots, setCannabisLots] = useState<CannabisLot[]>(() => getStored('cannabis_lots', INITIAL_CANNABIS_LOTS));
   const [kratomBatches, setKratomBatches] = useState<KratomBatch[]>(() => getStored('kratom_batches', INITIAL_KRATOM_BATCHES));
@@ -198,11 +214,191 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => saveStored('kitchen', kitchenOrders), [kitchenOrders]);
   useEffect(() => saveStored('audit_logs', auditLogs), [auditLogs]);
 
-  // Seed Firestore on Mount
+  // Real-time Firestore Subscriptions for Multi-Device Sync
   useEffect(() => {
-    seedFirestoreIfEmpty().catch((err) =>
-      console.warn('Firestore seed check notice:', err)
-    );
+    let unsubscribes: (() => void)[] = [];
+
+    const initSync = async () => {
+      try {
+        await seedFirestoreIfEmpty();
+
+        // 1. Settings
+        const unsubSettings = onSnapshot(
+          doc(db, COLLECTIONS.SETTINGS, 'default'),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data() as ShopSettings;
+              setShopSettingsInternal(data);
+              saveStored('settings', data);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.GET, COLLECTIONS.SETTINGS)
+        );
+        unsubscribes.push(unsubSettings);
+
+        // 2. Products
+        const unsubProducts = onSnapshot(
+          collection(db, COLLECTIONS.PRODUCTS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as Product);
+              setProducts(list);
+              saveStored('products', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PRODUCTS)
+        );
+        unsubscribes.push(unsubProducts);
+
+        // 3. Customers
+        const unsubCustomers = onSnapshot(
+          collection(db, COLLECTIONS.CUSTOMERS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as Customer);
+              setCustomers(list);
+              saveStored('customers', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CUSTOMERS)
+        );
+        unsubscribes.push(unsubCustomers);
+
+        // 4. Suppliers
+        const unsubSuppliers = onSnapshot(
+          collection(db, COLLECTIONS.SUPPLIERS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as Supplier);
+              setSuppliers(list);
+              saveStored('suppliers', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.SUPPLIERS)
+        );
+        unsubscribes.push(unsubSuppliers);
+
+        // 5. Users
+        const unsubUsers = onSnapshot(
+          collection(db, COLLECTIONS.USERS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as User);
+              setUsers(list);
+              saveStored('users_list', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS)
+        );
+        unsubscribes.push(unsubUsers);
+
+        // 6. Sales/Orders
+        const unsubSales = onSnapshot(
+          collection(db, COLLECTIONS.SALES),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as SaleOrder);
+              list.sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              setOrders(list);
+              saveStored('orders', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.SALES)
+        );
+        unsubscribes.push(unsubSales);
+
+        // 7. Cannabis Lots
+        const unsubLots = onSnapshot(
+          collection(db, COLLECTIONS.CANNABIS_LOTS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as CannabisLot);
+              setCannabisLots(list);
+              saveStored('cannabis_lots', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.CANNABIS_LOTS)
+        );
+        unsubscribes.push(unsubLots);
+
+        // 8. Kratom Batches
+        const unsubBatches = onSnapshot(
+          collection(db, COLLECTIONS.PRODUCT_BATCHES),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as KratomBatch);
+              setKratomBatches(list);
+              saveStored('kratom_batches', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.PRODUCT_BATCHES)
+        );
+        unsubscribes.push(unsubBatches);
+
+        // 9. Stock Movements
+        const unsubMovements = onSnapshot(
+          collection(db, COLLECTIONS.STOCK_MOVEMENTS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as StockMovement);
+              list.sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              setStockMovements(list);
+              saveStored('movements', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.STOCK_MOVEMENTS)
+        );
+        unsubscribes.push(unsubMovements);
+
+        // 10. Kitchen Orders
+        const unsubKitchen = onSnapshot(
+          collection(db, COLLECTIONS.KITCHEN_ORDERS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as KitchenOrder);
+              list.sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              setKitchenOrders(list);
+              saveStored('kitchen', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.KITCHEN_ORDERS)
+        );
+        unsubscribes.push(unsubKitchen);
+
+        // 11. Audit Logs
+        const unsubLogs = onSnapshot(
+          collection(db, COLLECTIONS.AUDIT_LOGS),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const list = snapshot.docs.map((d) => d.data() as AuditLog);
+              list.sort(
+                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              setAuditLogs(list);
+              saveStored('audit_logs', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.AUDIT_LOGS)
+        );
+        unsubscribes.push(unsubLogs);
+
+        setIsCloudSynced(true);
+      } catch (e) {
+        console.error('Error setting up Firestore subscriptions:', e);
+      }
+    };
+
+    initSync();
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
   }, []);
 
   // Audit Logging
@@ -638,11 +834,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     patientMedicalNote?: string,
     prescriptionRef?: string
   ): SaleOrder | null => {
-    if (cart.length === 0) return null;
+    if (!cart || cart.length === 0) return null;
 
-    const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    const discountTotal = cart.reduce((acc, item) => acc + item.discount, 0);
-    const netTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
+    const subtotal = (cart || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const discountTotal = (cart || []).reduce((acc, item) => acc + item.discount, 0);
+    const netTotal = (cart || []).reduce((acc, item) => acc + item.subtotal, 0);
     const taxAmount = (netTotal * shopSettings.vatPercent) / (100 + shopSettings.vatPercent);
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -743,7 +939,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tableNo,
         timestamp: new Date().toISOString(),
         overallStatus: 'pending',
-        items: foodAndBevItems.map((item, idx) => ({
+        items: (foodAndBevItems || []).map((item, idx) => ({
           id: `kitem-${Date.now()}-${idx}`,
           productName: item.productName,
           quantity: item.quantity,
@@ -760,7 +956,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (customer) {
       const addedPoints = Math.floor(netTotal / 50); // 1 point per 50 THB
       setCustomers((prev) =>
-        prev.map((c) =>
+        (prev || []).map((c) =>
           c.id === customer.id
             ? {
                 ...c,
@@ -781,7 +977,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog(
       'COMPLETE_CHECKOUT',
       'pos',
-      `ชำระเงินออเดอร์ ${orderNo} ยอดรวม ฿${netTotal.toLocaleString()} (${paymentMethods.map((p) => p.method).join(', ')})`,
+      `ชำระเงินออเดอร์ ${orderNo} ยอดรวม ฿${netTotal.toLocaleString()} (${(paymentMethods || []).map((p) => p.method).join(', ')})`,
       '-',
       orderNo
     );
@@ -799,7 +995,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setKitchenOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId) {
-          const updatedItems = order.items.map((item) =>
+          const updatedItems = (order.items || []).map((item) =>
             item.id === itemId ? { ...item, status: newStatus } : item
           );
 
@@ -812,7 +1008,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           else if (allReady) overallStatus = 'ready';
           else if (anyPreparing) overallStatus = 'preparing';
 
-          return { ...order, items: updatedItems, overallStatus };
+          const updatedOrder = { ...order, items: updatedItems, overallStatus };
+          saveKitchenOrderToFirestore(updatedOrder);
+          return updatedOrder;
         }
         return order;
       })
@@ -839,6 +1037,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <POSContext.Provider
       value={{
+        isCloudSynced,
         isAuthenticated,
         login,
         logout,

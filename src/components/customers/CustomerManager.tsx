@@ -14,7 +14,7 @@ export const CustomerManager: React.FC = () => {
   const [birthDate, setBirthDate] = useState('1990-01-01');
   const [medicalNote, setMedicalNote] = useState('');
 
-  const filteredCustomers = customers.filter(
+  const filteredCustomers = (customers || []).filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone.includes(searchQuery)

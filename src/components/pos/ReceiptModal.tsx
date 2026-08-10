@@ -24,14 +24,51 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
   const [taxPayerAddress, setTaxPayerAddress] = useState('กรุงเทพมหานคร');
 
   const handlePrint = () => {
-    window.print();
+    try {
+      window.print();
+    } catch (e) {
+      console.warn('Direct window.print failed, attempting iframe print fallback', e);
+    }
+
+    // Fallback Popup window for printing if iframe print is intercepted
+    const receiptElement = document.querySelector('.printable-receipt');
+    if (receiptElement) {
+      const printWin = window.open('', '_blank', 'width=450,height=600');
+      if (printWin) {
+        printWin.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Receipt ${order.orderNo}</title>
+              <style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 16px; margin: 0; background: #fff; color: #000; }
+                .printable-receipt { width: 100%; max-width: 80mm; margin: 0 auto; font-size: 11px; line-height: 1.3; }
+                .printable-receipt table { width: 100%; }
+                @media print {
+                  body { padding: 0; }
+                }
+              </style>
+            </head>
+            <body>
+              ${receiptElement.outerHTML}
+              <script>
+                setTimeout(() => {
+                  window.print();
+                }, 300);
+              </script>
+            </body>
+          </html>
+        `);
+        printWin.document.close();
+      }
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
       <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 text-slate-800 shadow-2xl flex flex-col max-h-[92vh]">
         {/* Top Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 no-print">
           <div className="flex items-center space-x-2">
             <CheckCircle className="w-5 h-5 text-emerald-600" />
             <h3 className="font-bold text-base text-slate-900">ชำระเงินสำเร็จ (Receipt Preview)</h3>
@@ -42,7 +79,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
         </div>
 
         {/* Receipt Type Switcher */}
-        <div className="my-3 flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+        <div className="my-3 flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs no-print">
           <button
             onClick={() => setReceiptType('abbreviated')}
             className={`flex-1 py-1.5 rounded-lg font-bold transition ${
@@ -171,7 +208,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
               <span className="col-span-2 text-right">รวม</span>
             </div>
 
-            {order.items.map((item, i) => (
+            {(order?.items || []).map((item, i) => (
               <div key={i} className="grid grid-cols-12 text-[10px] text-slate-800">
                 <div className="col-span-6">
                   <p className="font-semibold">{item.productName}</p>
@@ -222,7 +259,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
 
             {/* Payment Method Details */}
             <div className="pt-2 text-[10px] text-slate-600 space-y-0.5">
-              {order.paymentMethods.map((p, idx) => (
+              {(order?.paymentMethods || []).map((p, idx) => (
                 <div key={idx} className="flex justify-between">
                   <span>
                     การชำระ ({p.method}): {p.referenceNo ? `[${p.referenceNo}]` : ''}
@@ -248,7 +285,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
         </div>
 
         {/* Modal Action Buttons */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between no-print">
           <button
             onClick={() => {
               navigator.clipboard.writeText(JSON.stringify(order, null, 2));

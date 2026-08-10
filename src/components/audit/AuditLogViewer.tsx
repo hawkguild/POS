@@ -3,7 +3,7 @@ import { usePOS } from '../../context/POSContext';
 import { ShieldCheck, Search, Filter, Lock, Terminal, FileText, CheckCircle2 } from 'lucide-react';
 
 export const AuditLogViewer: React.FC = () => {
-  const { auditLogs } = usePOS();
+  const { auditLogs = [] } = usePOS();
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
 

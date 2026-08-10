@@ -206,7 +206,7 @@ export const UserManager: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {users.map((u) => {
+              {(users || []).map((u) => {
                 const isSelf = u.id === currentUser.id;
                 return (
                   <tr key={u.id} className="hover:bg-slate-50 transition">

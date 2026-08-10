@@ -24,18 +24,18 @@ import {
 } from 'lucide-react';
 
 export const SupplierManager: React.FC = () => {
-  const { suppliers, addSupplier, updateSupplier, deleteSupplier, cannabisLots, orders, products } = usePOS();
+  const { suppliers = [], addSupplier, updateSupplier, deleteSupplier, cannabisLots = [], orders = [], products = [] } = usePOS();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
-    suppliers.length > 0 ? suppliers[0] : null
+    (suppliers || []).length > 0 ? suppliers[0] : null
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [showPrintReportModal, setShowPrintReportModal] = useState(false);
 
-  const filteredSuppliers = suppliers.filter((s) => {
+  const filteredSuppliers = (suppliers || []).filter((s) => {
     const matchesSearch =
       s.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,15 +86,15 @@ export const SupplierManager: React.FC = () => {
 
   // Find linked lots for selected supplier
   const linkedLots = selectedSupplier
-    ? cannabisLots.filter((l) => l.supplierId === selectedSupplier.id)
+    ? (cannabisLots || []).filter((l) => l.supplierId === selectedSupplier.id)
     : [];
 
   // Find sales orders that contain items from this supplier's lots or items
   const linkedOrders: { order: SaleOrder; lotNumber?: string; productName: string; qty: number }[] = [];
   if (selectedSupplier) {
     const supplierLotNumbers = new Set(linkedLots.map((l) => l.lotNumber));
-    orders.forEach((ord) => {
-      ord.items.forEach((item) => {
+    (orders || []).forEach((ord) => {
+      (ord?.items || []).forEach((item) => {
         if (item.lotNumber && supplierLotNumbers.has(item.lotNumber)) {
           linkedOrders.push({
             order: ord,
