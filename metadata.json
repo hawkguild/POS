@@ -1,0 +1,6 @@
+{
+  "name": "THAI MULTI BUSINESS POS",
+  "description": "Multi-business POS for Cannabis (Controlled Herbs 2026 Compliance), Kratom Batching & Food Recipe Kitchen System with Inventory, Audit Trail and Accounting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
