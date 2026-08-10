@@ -64,14 +64,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Store Title */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('settings')}>
             <div className="bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-700 p-2.5 rounded-xl shadow-md flex items-center justify-center">
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-wide">
-                  THAI MULTI BUSINESS POS
+                  {shopSettings.shopName || 'THAI MULTI BUSINESS POS'}
                 </h1>
                 <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
                   B.E. 2569 Compliant
@@ -128,6 +128,20 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               ) : (
                 <VolumeX className="w-5 h-5 text-slate-400" />
               )}
+            </button>
+
+            {/* Quick Admin Settings Button */}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
+                activeTab === 'settings'
+                  ? 'bg-amber-500 text-slate-900 border-amber-600 shadow-sm'
+                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200'
+              }`}
+              title="ตั้งค่าร้านค้า, เปลี่ยนชื่อร้าน, QR รับเงิน และหัวบิล"
+            >
+              <Store className="w-3.5 h-3.5 text-indigo-700" />
+              <span>ตั้งค่าร้าน (Admin)</span>
             </button>
 
             {/* Reset Demo Data Button */}
@@ -204,7 +218,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                     ))}
                   </div>
 
-                  <div className="pt-2 mt-2 border-t border-slate-100">
+                  <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
+                    <button
+                      onClick={() => {
+                        setShowRoleDropdown(false);
+                        setActiveTab('settings');
+                      }}
+                      className="w-full flex items-center justify-center space-x-1.5 p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-bold transition border border-indigo-200"
+                    >
+                      <Store className="w-3.5 h-3.5" />
+                      <span>ตั้งค่าชื่อร้าน, QR & หัวบิล</span>
+                    </button>
+
                     <button
                       onClick={() => {
                         setShowRoleDropdown(false);
