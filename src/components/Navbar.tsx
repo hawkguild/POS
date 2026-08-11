@@ -129,13 +129,21 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 {isCloudSynced ? (
                   <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full border border-emerald-300 font-bold flex items-center gap-1 shadow-2xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    ซิงค์เรียลไทม์ (Cloud)
+                    เชื่อมต่อแล้ว
                   </span>
                 ) : (
                   <span className="bg-amber-100 text-amber-800 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 font-medium animate-pulse">
                     กำลังเชื่อมต่อ Cloud...
                   </span>
                 )}
+                <button
+                  onClick={logout}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs px-2.5 py-0.5 rounded-full border border-rose-200 font-bold flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                  title="ออกจากระบบ (Logout)"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                  <span>ออกจากระบบ</span>
+                </button>
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1 font-medium hidden sm:flex">
                 <span>🌿 กัญชาสมุนไพรควบคุม</span>
@@ -266,6 +274,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                         </div>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        logout();
+                      }}
+                      className="py-1.5 px-3 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-extrabold rounded-xl text-xs flex items-center space-x-1 transition cursor-pointer shadow-xs border border-rose-500/50"
+                      title="ออกจากระบบ"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>ออกจากระบบ</span>
+                    </button>
                   </div>
 
                   {/* MAIN NAVIGATION MENU SECTION */}
@@ -380,31 +400,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                       <span className="w-2.5 h-2.5 rounded-full ml-1" style={{ backgroundColor: activeTheme.primaryColor }}></span>
                     </button>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          if (confirm('คุณต้องการรีเซ็ตข้อมูลตัวอย่างย้อนกลับเป็นค่าเริ่มต้นหรือไม่?')) {
-                            resetToDemoData();
-                          }
-                        }}
-                        className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition cursor-pointer border border-slate-300"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                        <span>รีเซ็ตสาธิต</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          logout();
-                        }}
-                        className="flex-1 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition cursor-pointer border border-rose-200"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>ออกจากระบบ</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        if (confirm('คุณต้องการรีเซ็ตข้อมูลตัวอย่างย้อนกลับเป็นค่าเริ่มต้นหรือไม่?')) {
+                          resetToDemoData();
+                        }
+                      }}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition cursor-pointer border border-slate-300"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                      <span>รีเซ็ตข้อมูลสาธิต</span>
+                    </button>
                   </div>
                 </div>
               )}
