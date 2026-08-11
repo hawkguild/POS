@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePOS } from '../context/POSContext';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeSelectorModal } from './common/ThemeSelectorModal';
 import {
   Store,
   UserCheck,
@@ -9,9 +11,26 @@ import {
   VolumeX,
   Sparkles,
   ChevronDown,
+  ChevronRight,
   Info,
   Clock,
   LogOut,
+  ShoppingCart,
+  Leaf,
+  Coffee,
+  ChefHat,
+  Package,
+  Truck,
+  Users,
+  UserCog,
+  ShieldCheck,
+  FileSpreadsheet,
+  Settings,
+  Check,
+  Grid,
+  Menu,
+  User,
+  Palette,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -20,10 +39,41 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
-  const { currentUser, setCurrentUser, users, shopSettings, resetToDemoData, auditLogs, logout, isCloudSynced } = usePOS();
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const { currentUser, setCurrentUser, users, shopSettings, resetToDemoData, logout, isCloudSynced } = usePOS();
+  const { activeTheme } = useTheme();
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const navigationMenus = [
+    { id: 'pos', label: 'หน้าหลัก POS (ขายสินค้า)', icon: ShoppingCart, badge: 'ขายสินค้า' },
+    { id: 'cannabis', label: 'กัญชา (Compliance)', icon: Leaf, badge: '2569' },
+    { id: 'kratom', label: 'น้ำกระท่อม (Batch)', icon: Coffee, badge: 'สูตรต้ม' },
+    { id: 'kitchen', label: 'จอสั่งอาหาร (KDS)', icon: ChefHat, badge: 'ครัว' },
+    { id: 'inventory', label: 'คลังสินค้า (Stock)', icon: Package },
+    { id: 'suppliers', label: 'ซัพพลายเออร์', icon: Truck },
+    { id: 'customers', label: 'สมาชิก & ผู้ป่วย', icon: Users },
+    { id: 'users', label: 'ผู้ใช้งานระบบ', icon: UserCog, badge: 'Admin' },
+    { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+    { id: 'reports', label: 'รายงาน & บัญชี', icon: FileSpreadsheet },
+    { id: 'settings', label: 'ตั้งค่าร้านค้า', icon: Settings, badge: 'แอดมิน' },
+  ];
+
+  const currentMenu = navigationMenus.find((m) => m.id === activeTab) || navigationMenus[0];
+  const CurrentMenuIcon = currentMenu.icon;
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -45,32 +95,32 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'Super Admin (เจ้าของ)';
+        return 'Super Admin';
       case 'manager':
-        return 'Manager (ผู้จัดการ)';
+        return 'ผู้จัดการ (Manager)';
       case 'cashier':
-        return 'Cashier (แคชเชียร์)';
+        return 'แคชเชียร์ (Cashier)';
       case 'warehouse':
-        return 'Warehouse (คลัง)';
+        return 'คลังสินค้า (Warehouse)';
       case 'kitchen':
-        return 'Kitchen (พ่อครัว)';
+        return 'พ่อครัว (Kitchen)';
       default:
         return role;
     }
   };
 
   return (
-    <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Store Title */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('settings')}>
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('pos')}>
             <div className="bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-700 p-2.5 rounded-xl shadow-md flex items-center justify-center">
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-wide">
+                <h1 className="font-extrabold text-base sm:text-lg text-slate-900 tracking-wide">
                   {shopSettings.shopName || 'THAI MULTI BUSINESS POS'}
                 </h1>
                 <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
@@ -79,15 +129,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 {isCloudSynced ? (
                   <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full border border-emerald-300 font-bold flex items-center gap-1 shadow-2xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    ซิงค์เรียลไทม์ 2+ อุปกรณ์ (Cloud)
+                    ซิงค์เรียลไทม์ (Cloud)
                   </span>
                 ) : (
                   <span className="bg-amber-100 text-amber-800 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 font-medium animate-pulse">
-                    กำลังเชื่อมต่อ Cloud Sync...
+                    กำลังเชื่อมต่อ Cloud...
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+              <p className="text-xs text-slate-500 flex items-center gap-1 font-medium hidden sm:flex">
                 <span>🌿 กัญชาสมุนไพรควบคุม</span>
                 <span>•</span>
                 <span>🥤 กระท่อม</span>
@@ -116,12 +166,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </div>
           </div>
 
-          {/* User Role Switcher & Utilities */}
+          {/* User Profile & Main Menu Dropdown Trigger */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Theme Switcher Button */}
+            <button
+              onClick={() => setShowThemeModal(true)}
+              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center space-x-1 border border-slate-200 bg-slate-50"
+              title="เปลี่ยนธีมสีประจำร้าน (5 แบบ)"
+            >
+              <Palette className="w-4 h-4 text-emerald-600" />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeTheme.primaryColor }}></span>
+            </button>
+
             {/* Info Trigger */}
             <button
               onClick={() => setShowInfoModal(true)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               title="ข้อมูลการรองรับกฎหมาย 2569"
             >
               <Info className="w-5 h-5 text-amber-500" />
@@ -130,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             {/* Sound Toggle */}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               title={soundEnabled ? 'ปิดเสียงการแจ้งเตือน' : 'เปิดเสียงการแจ้งเตือน'}
             >
               {soundEnabled ? (
@@ -140,132 +200,221 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               )}
             </button>
 
-            {/* Quick Admin Settings Button */}
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-                activeTab === 'settings'
-                  ? 'bg-amber-500 text-slate-900 border-amber-600 shadow-sm'
-                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200'
-              }`}
-              title="ตั้งค่าร้านค้า, เปลี่ยนชื่อร้าน, QR รับเงิน และหัวบิล"
-            >
-              <Store className="w-3.5 h-3.5 text-indigo-700" />
-              <span>ตั้งค่าร้าน (Admin)</span>
-            </button>
-
-            {/* Reset Demo Data Button */}
-            <button
-              onClick={() => {
-                if (confirm('คุณต้องการรีเซ็ตข้อมูลตัวอย่างย้อนกลับเป็นค่าเริ่มต้นหรือไม่?')) {
-                  resetToDemoData();
-                }
-              }}
-              className="hidden sm:flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg border border-slate-300 transition font-medium"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-              <span>รีเซ็ตสาธิต</span>
-            </button>
-
-            {/* User Profile / Role Switcher */}
-            <div className="relative">
+            {/* LOGGED-IN USER & MAIN MENU DROPDOWN CONTAINER */}
+            <div className="relative" ref={dropdownRef}>
               <button
-                onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-300 transition text-left"
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                className={`flex items-center space-x-2.5 px-3 py-1.5 rounded-2xl border transition text-left cursor-pointer shadow-xs ${
+                  showUserDropdown
+                    ? 'bg-slate-900 text-white border-slate-900 ring-2 ring-emerald-500/30'
+                    : 'bg-emerald-50/90 hover:bg-emerald-100 text-slate-900 border-emerald-300'
+                }`}
               >
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-7 h-7 rounded-full object-cover border border-slate-300"
-                />
-                <div className="hidden sm:block">
-                  <div className="text-xs font-semibold text-slate-800 leading-tight">
-                    {currentUser.name}
-                  </div>
-                  <span
-                    className={`inline-block text-[10px] px-1.5 py-0.2 rounded border font-medium ${getRoleBadge(
-                      currentUser.role
-                    )}`}
-                  >
-                    {getRoleLabel(currentUser.role)}
-                  </span>
+                <div className="relative">
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-xl object-cover border border-emerald-400 shadow-2xs"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-slate-500" />
+
+                <div className="hidden md:block">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-xs font-extrabold text-slate-900 leading-tight">
+                      {currentUser.name}
+                    </span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.1 rounded border font-bold ${getRoleBadge(
+                        currentUser.role
+                      )}`}
+                    >
+                      {getRoleLabel(currentUser.role)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-bold flex items-center space-x-1 mt-0.5">
+                    <CurrentMenuIcon className="w-3 h-3 text-emerald-600" />
+                    <span className="truncate max-w-[120px]">{currentMenu.label}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1 bg-emerald-600 text-white text-xs px-2 py-1 rounded-xl font-bold ml-1">
+                  <Menu className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">เมนู</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} />
+                </div>
               </button>
 
-              {/* Role Dropdown */}
-              {showRoleDropdown && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 text-slate-800">
-                  <div className="text-xs font-semibold text-slate-500 px-3 py-1.5 border-b border-slate-100">
-                    สลับบทบาทผู้ใช้งาน (Permission Switcher)
+              {/* MAIN MENU & USER DROPDOWN PANEL */}
+              {showUserDropdown && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200 p-3 z-50 text-slate-800 animate-fadeIn space-y-3">
+                  {/* User Profile Header Card */}
+                  <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white p-3.5 rounded-2xl flex items-center justify-between shadow-xs">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-10 h-10 rounded-xl object-cover border-2 border-emerald-400"
+                      />
+                      <div>
+                        <h4 className="font-extrabold text-sm text-white">{currentUser.name}</h4>
+                        <div className="flex items-center space-x-1.5 mt-0.5">
+                          <span className="text-[10px] bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded-full font-semibold border border-emerald-600/50">
+                            {getRoleLabel(currentUser.role)}
+                          </span>
+                          <span className="text-[10px] text-emerald-300">● เชื่อมต่อแล้ว</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1 mt-1">
-                    {(users || []).map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          setCurrentUser(u);
-                          setShowRoleDropdown(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition ${
-                          currentUser.id === u.id
-                            ? 'bg-emerald-50 text-emerald-800 font-medium border border-emerald-200'
-                            : 'hover:bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
+
+                  {/* MAIN NAVIGATION MENU SECTION */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between px-2 py-1 text-slate-500 font-extrabold text-[11px]">
+                      <span className="flex items-center space-x-1 text-slate-700">
+                        <Grid className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>เมนูหลักระบบ (Main Navigation)</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+                        11 โมดูล
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-1 max-h-[320px] overflow-y-auto pr-1 no-scrollbar">
+                      {navigationMenus.map((menu) => {
+                        const Icon = menu.icon;
+                        const isActive = activeTab === menu.id;
+
+                        return (
+                          <button
+                            key={menu.id}
+                            onClick={() => {
+                              setActiveTab(menu.id);
+                              setShowUserDropdown(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                                : 'bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-950 border border-slate-200/80 hover:border-emerald-300'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5">
+                              <div
+                                className={`p-1.5 rounded-lg ${
+                                  isActive
+                                    ? 'bg-emerald-700 text-white'
+                                    : 'bg-white text-emerald-600 border border-slate-200 shadow-2xs'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <span className="text-xs font-bold">{menu.label}</span>
+                            </div>
+
+                            <div className="flex items-center space-x-1.5">
+                              {menu.badge && (
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
+                                    isActive
+                                      ? 'bg-emerald-800 text-emerald-200'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  }`}
+                                >
+                                  {menu.badge}
+                                </span>
+                              )}
+                              {isActive && <Check className="w-4 h-4 text-emerald-200" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* USER ROLE SWITCHER SECTION */}
+                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                    <div className="px-2 text-[11px] font-bold text-slate-500 flex items-center space-x-1">
+                      <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>สลับสิทธิ์ใช้งาน (Permission Switcher)</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      {(users || []).map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setCurrentUser(u);
+                            setShowUserDropdown(false);
+                          }}
+                          className={`p-2 rounded-xl text-[11px] font-semibold flex items-center space-x-2 transition cursor-pointer border ${
+                            currentUser.id === u.id
+                              ? 'bg-indigo-50 border-indigo-300 text-indigo-950 font-bold'
+                              : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                          }`}
+                        >
                           <img
                             src={u.avatar}
                             alt={u.name}
-                            className="w-6 h-6 rounded-full object-cover"
+                            className="w-5 h-5 rounded-full object-cover"
                           />
-                          <span>{u.name}</span>
-                        </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${getRoleBadge(u.role)}`}>
-                          {u.role}
-                        </span>
-                      </button>
-                    ))}
+                          <div className="truncate text-left flex-1">
+                            <div className="truncate leading-none">{u.name}</div>
+                            <span className="text-[9px] text-slate-500 capitalize">{u.role}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
+                  {/* BOTTOM UTILITY ACTIONS */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-col space-y-1.5">
                     <button
                       onClick={() => {
-                        setShowRoleDropdown(false);
-                        setActiveTab('settings');
+                        setShowUserDropdown(false);
+                        setShowThemeModal(true);
                       }}
-                      className="w-full flex items-center justify-center space-x-1.5 p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg text-xs font-bold transition border border-indigo-200"
+                      className="w-full py-2 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center space-x-2 transition cursor-pointer shadow-xs border border-slate-700"
                     >
-                      <Store className="w-3.5 h-3.5" />
-                      <span>ตั้งค่าชื่อร้าน, QR & หัวบิล</span>
+                      <Palette className="w-4 h-4 text-emerald-400" />
+                      <span>เปลี่ยนธีมสีประจำร้าน (5 แบบ)</span>
+                      <span className="w-2.5 h-2.5 rounded-full ml-1" style={{ backgroundColor: activeTheme.primaryColor }}></span>
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setShowRoleDropdown(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center justify-center space-x-1.5 p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition border border-rose-200"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>ออกจากระบบ (Logout)</span>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          if (confirm('คุณต้องการรีเซ็ตข้อมูลตัวอย่างย้อนกลับเป็นค่าเริ่มต้นหรือไม่?')) {
+                            resetToDemoData();
+                          }
+                        }}
+                        className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition cursor-pointer border border-slate-300"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                        <span>รีเซ็ตสาธิต</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          logout();
+                        }}
+                        className="flex-1 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition cursor-pointer border border-rose-200"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>ออกจากระบบ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Header Direct Logout Button */}
-            <button
-              onClick={logout}
-              className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-200"
-              title="ออกจากระบบ"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </div>
+
+      {/* Theme Selector Modal */}
+      <ThemeSelectorModal isOpen={showThemeModal} onClose={() => setShowThemeModal(false)} />
 
       {/* Compliance Info Modal */}
       {showInfoModal && (
@@ -278,7 +427,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               </div>
               <button
                 onClick={() => setShowInfoModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-xl font-bold px-2"
+                className="text-slate-400 hover:text-slate-700 text-xl font-bold px-2 cursor-pointer"
               >
                 ✕
               </button>
@@ -314,7 +463,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowInfoModal(false)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-md"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-md cursor-pointer"
               >
                 รับทราบและเข้าใจ
               </button>
@@ -325,3 +474,4 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     </header>
   );
 };
+

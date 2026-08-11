@@ -68,6 +68,7 @@ export const POSTerminal: React.FC = () => {
 
   // Add Menu Modal State
   const [isAddMenuModalOpen, setIsAddMenuModalOpen] = useState(false);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
 
   // Filter Products
   const filteredProducts = (products || []).filter((p) => {
@@ -92,11 +93,11 @@ export const POSTerminal: React.FC = () => {
     .reduce((acc, item) => acc + item.quantity, 0);
 
   // Barcode Handler
-  const handleBarcodeSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcodeInput.trim()) return;
+  const handleScanCode = (code: string) => {
+    const query = code.trim().toLowerCase();
+    if (!query) return;
     const foundProduct = products.find(
-      (p) => p.code.toLowerCase() === barcodeInput.trim().toLowerCase()
+      (p) => p.code.toLowerCase() === query
     );
     if (foundProduct) {
       if (foundProduct.category === 'cannabis') {
@@ -105,10 +106,17 @@ export const POSTerminal: React.FC = () => {
       } else {
         addToCart(foundProduct, 1);
       }
-      setBarcodeInput('');
+      setIsCameraScannerOpen(false);
     } else {
-      alert(`ไม่พบสินค้ารหัส Barcode / SKU: ${barcodeInput}`);
+      alert(`ไม่พบสินค้ารหัส Barcode / SKU: ${code}`);
     }
+  };
+
+  const handleBarcodeSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcodeInput.trim()) return;
+    handleScanCode(barcodeInput);
+    setBarcodeInput('');
   };
 
   const handleAddCannabisWithWeight = () => {
@@ -145,14 +153,23 @@ export const POSTerminal: React.FC = () => {
                 placeholder="สแกน Barcode / SKU"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
-                className="bg-slate-50 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:bg-white focus:border-emerald-500 placeholder-slate-400 w-36 sm:w-44 font-mono transition"
+                className="bg-slate-50 text-slate-800 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:bg-white focus:border-emerald-500 placeholder-slate-400 w-32 sm:w-40 font-mono transition"
               />
             </div>
             <button
               type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold transition shadow-xs"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer"
             >
               สแกน
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCameraScannerOpen(true)}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-2 rounded-xl text-xs font-bold transition shadow-2xs flex items-center space-x-1 cursor-pointer"
+              title="เปิดกล้องสแกน Barcode / QR Code"
+            >
+              <Camera className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden md:inline">สแกน Barcode</span>
             </button>
           </form>
 
@@ -757,6 +774,19 @@ export const POSTerminal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Camera Scanner Modal for POS */}
+      <CameraScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScan={handleScanCode}
+        title="สแกน Barcode / SKU สินค้าด้วยกล้อง"
+        description="ส่องกล้องไปที่รหัส Barcode สินค้าเพื่อเพิ่มลงตะกร้าขายอัตโนมัติ"
+        sampleCodes={products.slice(0, 4).map((p) => ({
+          code: p.code,
+          label: p.name,
+        }))}
+      />
     </div>
   );
 };

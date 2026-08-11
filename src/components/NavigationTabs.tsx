@@ -9,7 +9,6 @@ import {
   Users,
   UserCog,
   ShieldCheck,
-  BarChart3,
   FileSpreadsheet,
   Settings,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ activeTab, setAc
     { id: 'customers', label: 'สมาชิก & ผู้ป่วย', icon: Users },
     { id: 'users', label: 'ผู้ใช้งานระบบ', icon: UserCog, badge: 'Admin' },
     { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
-    { id: 'dashboard', label: 'แดชบอร์ด', icon: BarChart3 },
     { id: 'reports', label: 'รายงาน & บัญชี', icon: FileSpreadsheet },
     { id: 'settings', label: 'ตั้งค่าร้าน', icon: Settings, badge: 'แอดมิน' },
   ];

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { POSProvider, usePOS } from './context/POSContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { NavigationTabs } from './components/NavigationTabs';
 import { POSTerminal } from './components/pos/POSTerminal';
@@ -25,11 +26,8 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-slate-100/90 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.06),rgba(255,255,255,0))] text-slate-900 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
-      {/* Top Header Navbar */}
+      {/* Top Header Navbar with Integrated Main Menu Dropdown under User */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* Main Module Navigation Tabs */}
-      <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Dynamic View Body */}
       <main className="flex-1 p-3 sm:p-5 md:p-6 max-w-7xl w-full mx-auto overflow-y-auto">
@@ -42,7 +40,6 @@ function MainApp() {
         {activeTab === 'customers' && <CustomerManager />}
         {activeTab === 'users' && <UserManager />}
         {activeTab === 'audit' && <AuditLogViewer />}
-        {activeTab === 'dashboard' && <ReportsDashboard />}
         {activeTab === 'reports' && <ReportsDashboard />}
         {activeTab === 'settings' && <SettingsManager />}
       </main>
@@ -52,8 +49,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <POSProvider>
-      <MainApp />
-    </POSProvider>
+    <ThemeProvider>
+      <POSProvider>
+        <MainApp />
+      </POSProvider>
+    </ThemeProvider>
   );
 }
