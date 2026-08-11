@@ -21,7 +21,18 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState('pos');
 
   if (!isAuthenticated) {
-    return <LoginScreen />;
+    return (
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-1">
+          <LoginScreen />
+        </div>
+        <footer className="py-2.5 bg-slate-900 text-slate-300 text-center text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 border-t border-slate-800 z-20">
+          <span className="text-base">⛵</span>
+          <span>พัฒนาโปรแกรมโดย ที พกท 81</span>
+          <span className="text-base">⛵</span>
+        </footer>
+      </div>
+    );
   }
 
   return (
@@ -43,6 +54,13 @@ function MainApp() {
         {activeTab === 'reports' && <ReportsDashboard />}
         {activeTab === 'settings' && <SettingsManager />}
       </main>
+
+      {/* Footer at the very bottom */}
+      <footer className="py-3 bg-slate-900 text-slate-300 text-center text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 border-t border-slate-800 shadow-inner">
+        <span className="text-base">⛵</span>
+        <span>พัฒนาโปรแกรมโดย ที พกท 81</span>
+        <span className="text-base">⛵</span>
+      </footer>
     </div>
   );
 }

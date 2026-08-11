@@ -240,8 +240,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubProducts = onSnapshot(
           collection(db, COLLECTIONS.PRODUCTS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as Product);
+            const list = snapshot.docs.map((d) => d.data() as Product);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setProducts(list);
               saveStored('products', list);
             }
@@ -254,8 +254,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubCustomers = onSnapshot(
           collection(db, COLLECTIONS.CUSTOMERS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as Customer);
+            const list = snapshot.docs.map((d) => d.data() as Customer);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setCustomers(list);
               saveStored('customers', list);
             }
@@ -268,8 +268,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubSuppliers = onSnapshot(
           collection(db, COLLECTIONS.SUPPLIERS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as Supplier);
+            const list = snapshot.docs.map((d) => d.data() as Supplier);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setSuppliers(list);
               saveStored('suppliers', list);
             }
@@ -282,8 +282,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubUsers = onSnapshot(
           collection(db, COLLECTIONS.USERS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as User);
+            const list = snapshot.docs.map((d) => d.data() as User);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setUsers(list);
               saveStored('users_list', list);
             }
@@ -296,14 +296,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubSales = onSnapshot(
           collection(db, COLLECTIONS.SALES),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as SaleOrder);
-              list.sort(
-                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-              );
-              setOrders(list);
-              saveStored('orders', list);
-            }
+            const list = snapshot.docs.map((d) => d.data() as SaleOrder);
+            list.sort(
+              (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            setOrders(list);
+            saveStored('orders', list);
           },
           (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.SALES)
         );
@@ -313,8 +311,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubLots = onSnapshot(
           collection(db, COLLECTIONS.CANNABIS_LOTS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as CannabisLot);
+            const list = snapshot.docs.map((d) => d.data() as CannabisLot);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setCannabisLots(list);
               saveStored('cannabis_lots', list);
             }
@@ -327,8 +325,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubBatches = onSnapshot(
           collection(db, COLLECTIONS.PRODUCT_BATCHES),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as KratomBatch);
+            const list = snapshot.docs.map((d) => d.data() as KratomBatch);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
               setKratomBatches(list);
               saveStored('kratom_batches', list);
             }
@@ -341,14 +339,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubMovements = onSnapshot(
           collection(db, COLLECTIONS.STOCK_MOVEMENTS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as StockMovement);
-              list.sort(
-                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-              );
-              setStockMovements(list);
-              saveStored('movements', list);
-            }
+            const list = snapshot.docs.map((d) => d.data() as StockMovement);
+            list.sort(
+              (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            setStockMovements(list);
+            saveStored('movements', list);
           },
           (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.STOCK_MOVEMENTS)
         );
@@ -358,14 +354,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubKitchen = onSnapshot(
           collection(db, COLLECTIONS.KITCHEN_ORDERS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as KitchenOrder);
-              list.sort(
-                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-              );
-              setKitchenOrders(list);
-              saveStored('kitchen', list);
-            }
+            const list = snapshot.docs.map((d) => d.data() as KitchenOrder);
+            list.sort(
+              (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            setKitchenOrders(list);
+            saveStored('kitchen', list);
           },
           (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.KITCHEN_ORDERS)
         );
@@ -375,14 +369,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const unsubLogs = onSnapshot(
           collection(db, COLLECTIONS.AUDIT_LOGS),
           (snapshot) => {
-            if (!snapshot.empty) {
-              const list = snapshot.docs.map((d) => d.data() as AuditLog);
-              list.sort(
-                (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-              );
-              setAuditLogs(list);
-              saveStored('audit_logs', list);
-            }
+            const list = snapshot.docs.map((d) => d.data() as AuditLog);
+            list.sort(
+              (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            setAuditLogs(list);
+            saveStored('audit_logs', list);
           },
           (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.AUDIT_LOGS)
         );
