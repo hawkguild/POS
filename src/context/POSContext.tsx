@@ -43,6 +43,7 @@ import {
   saveUserToFirestore,
   deleteUserFromFirestore,
   deleteSupplierFromFirestore,
+  deleteCustomerFromFirestore,
   COLLECTIONS,
   OperationType,
   handleFirestoreError,
@@ -107,6 +108,10 @@ interface POSContextType {
   addSupplier: (supplierData: Omit<Supplier, 'id'>) => void;
   updateSupplier: (id: string, updated: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => boolean;
+
+  addCustomer: (customerData: Omit<Customer, 'id' | 'memberCode' | 'registeredDate'> & Partial<Customer>) => Customer;
+  updateCustomer: (id: string, updated: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => boolean;
 
   adjustStock: (
     productId: string,
@@ -571,6 +576,48 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSuppliers((prev) => prev.filter((s) => s.id !== id));
     deleteSupplierFromFirestore(id);
     addAuditLog('DELETE_SUPPLIER', 'inventory', `ลบซัพพลายเออร์: ${target?.companyName || id}`);
+    return true;
+  };
+
+  // Customer Operations
+  const addCustomer = (customerData: Omit<Customer, 'id' | 'memberCode' | 'registeredDate'> & Partial<Customer>): Customer => {
+    const newCustomer: Customer = {
+      id: 'cust-' + Date.now(),
+      memberCode: customerData.memberCode || `CUST-${Math.floor(100 + Math.random() * 900)}`,
+      name: customerData.name,
+      phone: customerData.phone,
+      birthDate: customerData.birthDate || '1990-01-01',
+      points: customerData.points || 0,
+      totalSpend: customerData.totalSpend || 0,
+      medicalHistoryNote: customerData.medicalHistoryNote || '',
+      registeredDate: new Date().toISOString().split('T')[0],
+      ...customerData,
+    };
+    setCustomers((prev) => [newCustomer, ...(prev || [])]);
+    saveCustomerToFirestore(newCustomer);
+    addAuditLog('ADD_CUSTOMER', 'pos', `เพิ่มสมาชิกใหม่: ${newCustomer.name} (${newCustomer.phone})`);
+    return newCustomer;
+  };
+
+  const updateCustomer = (id: string, updated: Partial<Customer>) => {
+    setCustomers((prev) =>
+      (prev || []).map((c) => {
+        if (c.id === id) {
+          const updatedCustomer = { ...c, ...updated };
+          saveCustomerToFirestore(updatedCustomer);
+          return updatedCustomer;
+        }
+        return c;
+      })
+    );
+    addAuditLog('UPDATE_CUSTOMER', 'pos', `แก้ไขข้อมูลสมาชิก ID: ${id}`);
+  };
+
+  const deleteCustomer = (id: string): boolean => {
+    const target = (customers || []).find((c) => c.id === id);
+    setCustomers((prev) => (prev || []).filter((c) => c.id !== id));
+    deleteCustomerFromFirestore(id);
+    addAuditLog('DELETE_CUSTOMER', 'pos', `ลบสมาชิก: ${target?.name || id}`);
     return true;
   };
 
@@ -1057,6 +1104,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSuppliers,
         customers,
         setCustomers,
+        addCustomer,
+        updateCustomer,
+        deleteCustomer,
         cart,
         addToCart,
         removeFromCart,

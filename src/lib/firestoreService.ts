@@ -341,3 +341,11 @@ export async function deleteSupplierFromFirestore(supplierId: string) {
     console.error('Failed to delete supplier from Firestore:', err);
   }
 }
+
+export async function deleteCustomerFromFirestore(customerId: string) {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.CUSTOMERS, customerId));
+  } catch (err) {
+    console.error('Failed to delete customer from Firestore:', err);
+  }
+}
