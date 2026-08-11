@@ -56,6 +56,10 @@ import {
 
 interface POSContextType {
   isCloudSynced: boolean;
+  isSyncing: boolean;
+  pendingSyncCount: number;
+  lastSyncTime: string | null;
+  syncError: string | null;
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, passwordOrPin: string) => boolean;
   logout: () => void;
@@ -184,6 +188,37 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // States
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const isSyncing = pendingSyncCount > 0;
+
+  // Helper for tracking background Firestore writes (Optimistic Sync Pattern)
+  const runSyncWrite = <T,>(writePromise: Promise<T>): Promise<T> => {
+    setPendingSyncCount((prev) => prev + 1);
+    setSyncError(null);
+    return writePromise
+      .then((result) => {
+        setLastSyncTime(
+          new Date().toLocaleTimeString('th-TH', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        );
+        return result;
+      })
+      .catch((err: any) => {
+        console.error('Firestore optimistic sync error:', err);
+        setSyncError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Cloud');
+        throw err;
+      })
+      .finally(() => {
+        setPendingSyncCount((prev) => Math.max(0, prev - 1));
+      });
+  };
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
     getStored('auth_status', false)
   );
@@ -199,7 +234,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setShopSettings: React.Dispatch<React.SetStateAction<ShopSettings>> = (value) => {
     setShopSettingsInternal((prev) => {
       const updated = typeof value === 'function' ? (value as any)(prev) : value;
-      saveShopSettingsToFirestore(updated);
+      runSyncWrite(saveShopSettingsToFirestore(updated));
       return updated;
     });
   };
@@ -449,7 +484,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...(mandatoryReason !== undefined && { mandatoryReason }),
     };
     setAuditLogs((prev) => [newLog, ...prev]);
-    saveAuditLogToFirestore(newLog);
+    runSyncWrite(saveAuditLogToFirestore(newLog));
   };
 
   // Auth & User Management Methods
@@ -506,7 +541,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'usr-' + Date.now(),
     };
     setUsers((prev) => [...prev, newUser]);
-    saveUserToFirestore(newUser);
+    runSyncWrite(saveUserToFirestore(newUser));
     addAuditLog('ADD_USER', 'settings', `เพิ่มผู้ใช้งานใหม่: ${newUser.name} (${newUser.role})`);
   };
 
@@ -515,7 +550,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((u) => {
         if (u.id === id) {
           const newU = { ...u, ...updated };
-          saveUserToFirestore(newU);
+          runSyncWrite(saveUserToFirestore(newU));
           return newU;
         }
         return u;
@@ -536,7 +571,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const target = users.find((u) => u.id === id);
     setUsers((prev) => prev.filter((u) => u.id !== id));
-    deleteUserFromFirestore(id);
+    runSyncWrite(deleteUserFromFirestore(id));
     addAuditLog('DELETE_USER', 'settings', `ลบผู้ใช้งาน: ${target?.name || id}`);
     return true;
   };
@@ -548,7 +583,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'prod-' + Date.now(),
     };
     setProducts((prev) => [newProduct, ...prev]);
-    saveProductToFirestore(newProduct);
+    runSyncWrite(saveProductToFirestore(newProduct));
     addAuditLog('ADD_PRODUCT', 'inventory', `เพิ่มสินค้า/เมนูใหม่: ${newProduct.name} (${newProduct.category})`);
   };
 
@@ -557,7 +592,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => {
         if (p.id === id) {
           const newP = { ...p, ...updated };
-          saveProductToFirestore(newP);
+          runSyncWrite(saveProductToFirestore(newP));
           return newP;
         }
         return p;
@@ -569,7 +604,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteProduct = (id: string): boolean => {
     const target = products.find((p) => p.id === id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
-    deleteProductFromFirestore(id);
+    runSyncWrite(deleteProductFromFirestore(id));
     addAuditLog('DELETE_PRODUCT', 'inventory', `ลบสินค้า/เมนู: ${target?.name || id}`);
     return true;
   };
@@ -581,7 +616,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: 'sup-' + Date.now(),
     };
     setSuppliers((prev) => [newSupplier, ...prev]);
-    saveSupplierToFirestore(newSupplier);
+    runSyncWrite(saveSupplierToFirestore(newSupplier));
     addAuditLog('ADD_SUPPLIER', 'inventory', `เพิ่มซัพพลายเออร์ใหม่: ${newSupplier.companyName} (${newSupplier.code})`);
   };
 
@@ -590,7 +625,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((s) => {
         if (s.id === id) {
           const newS = { ...s, ...updated };
-          saveSupplierToFirestore(newS);
+          runSyncWrite(saveSupplierToFirestore(newS));
           return newS;
         }
         return s;
@@ -602,7 +637,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSupplier = (id: string): boolean => {
     const target = suppliers.find((s) => s.id === id);
     setSuppliers((prev) => prev.filter((s) => s.id !== id));
-    deleteSupplierFromFirestore(id);
+    runSyncWrite(deleteSupplierFromFirestore(id));
     addAuditLog('DELETE_SUPPLIER', 'inventory', `ลบซัพพลายเออร์: ${target?.companyName || id}`);
     return true;
   };
@@ -622,7 +657,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...customerData,
     };
     setCustomers((prev) => [newCustomer, ...(prev || [])]);
-    saveCustomerToFirestore(newCustomer);
+    runSyncWrite(saveCustomerToFirestore(newCustomer));
     addAuditLog('ADD_CUSTOMER', 'pos', `เพิ่มสมาชิกใหม่: ${newCustomer.name} (${newCustomer.phone})`);
     return newCustomer;
   };
@@ -632,7 +667,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (prev || []).map((c) => {
         if (c.id === id) {
           const updatedCustomer = { ...c, ...updated };
-          saveCustomerToFirestore(updatedCustomer);
+          runSyncWrite(saveCustomerToFirestore(updatedCustomer));
           return updatedCustomer;
         }
         return c;
@@ -644,7 +679,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteCustomer = (id: string): boolean => {
     const target = (customers || []).find((c) => c.id === id);
     setCustomers((prev) => (prev || []).filter((c) => c.id !== id));
-    deleteCustomerFromFirestore(id);
+    runSyncWrite(deleteCustomerFromFirestore(id));
     addAuditLog('DELETE_CUSTOMER', 'pos', `ลบสมาชิก: ${target?.name || id}`);
     return true;
   };
@@ -664,7 +699,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...expenseData,
     };
     setExpenses((prev) => [newExpense, ...(prev || [])]);
-    saveExpenseToFirestore(newExpense);
+    runSyncWrite(saveExpenseToFirestore(newExpense));
     addAuditLog('ADD_EXPENSE', 'settings', `บันทึก${newExpense.type === 'income' ? 'รายรับ' : 'รายจ่าย'}: ${newExpense.title} (${newExpense.amount} บาท)`);
     return newExpense;
   };
@@ -674,7 +709,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (prev || []).map((e) => {
         if (e.id === id) {
           const updatedExp = { ...e, ...updated };
-          saveExpenseToFirestore(updatedExp);
+          runSyncWrite(saveExpenseToFirestore(updatedExp));
           return updatedExp;
         }
         return e;
@@ -686,7 +721,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteExpense = (id: string): boolean => {
     const target = (expenses || []).find((e) => e.id === id);
     setExpenses((prev) => (prev || []).filter((e) => e.id !== id));
-    deleteExpenseFromFirestore(id);
+    runSyncWrite(deleteExpenseFromFirestore(id));
     addAuditLog('DELETE_EXPENSE', 'settings', `ลบรายการ: ${target?.title || id}`);
     return true;
   };
@@ -697,7 +732,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveStored('orders', []);
     setKitchenOrders([]);
     saveStored('kitchen', []);
-    resetAllSalesInFirestore(currentOrders);
+    runSyncWrite(resetAllSalesInFirestore(currentOrders));
     addAuditLog('RESET_SALES', 'pos', 'รีเซ็ทยอดขายทั้งหมดให้เป็น 0');
   };
 
@@ -796,7 +831,20 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update Product
     setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, stockQuantity: newQuantity } : p))
+      prev.map((p) => {
+        if (p.id === productId) {
+          const updatedStatus =
+            newQuantity <= 0
+              ? 'out_of_stock'
+              : p.status === 'out_of_stock'
+              ? 'available'
+              : p.status;
+          const updatedProduct = { ...p, stockQuantity: newQuantity, status: updatedStatus };
+          runSyncWrite(saveProductToFirestore(updatedProduct));
+          return updatedProduct;
+        }
+        return p;
+      })
     );
 
     // If Cannabis Lot, update Cannabis Lot remaining weight
@@ -805,11 +853,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prev.map((lot) => {
           if (lot.lotNumber === lotNumber || lot.id === lotNumber) {
             const newLotBal = Math.max(0, lot.remainingWeightGrams + diff);
-            return {
+            const updatedLot = {
               ...lot,
               remainingWeightGrams: newLotBal,
               status: newLotBal <= 0 ? 'depleted' : newLotBal < 10 ? 'low' : 'available',
             };
+            runSyncWrite(saveCannabisLotToFirestore(updatedLot));
+            return updatedLot;
           }
           return lot;
         })
@@ -833,7 +883,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userName: currentUser.name,
     };
     setStockMovements((prev) => [movement, ...prev]);
-    saveStockMovementToFirestore(movement);
+    runSyncWrite(saveStockMovementToFirestore(movement));
 
     // Audit Log
     addAuditLog(
@@ -859,7 +909,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setKratomBatches((prev) => [newBatch, ...prev]);
-    saveKratomBatchToFirestore(newBatch);
+    runSyncWrite(saveKratomBatchToFirestore(newBatch));
 
     // Deduct raw Kratom leaf stock if product exists
     const leafProduct = products.find(
@@ -869,7 +919,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const oldQty = leafProduct.stockQuantity;
       const newQty = Math.max(0, oldQty - batchData.leafWeightGrams);
       setProducts((prev) =>
-        prev.map((p) => (p.id === leafProduct.id ? { ...p, stockQuantity: newQty } : p))
+        prev.map((p) => {
+          if (p.id === leafProduct.id) {
+            const updatedProd = {
+              ...p,
+              stockQuantity: newQty,
+              status: newQty <= 0 ? 'out_of_stock' : p.status,
+            };
+            runSyncWrite(saveProductToFirestore(updatedProd));
+            return updatedProd;
+          }
+          return p;
+        })
       );
 
       // Record movement
@@ -888,7 +949,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userName: currentUser.name,
       };
       setStockMovements((prev) => [kratomMov, ...prev]);
-      saveStockMovementToFirestore(kratomMov);
+      runSyncWrite(saveStockMovementToFirestore(kratomMov));
     }
 
     addAuditLog(
@@ -913,22 +974,25 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCannabisLots((prev) => [newLot, ...prev]);
-    saveCannabisLotToFirestore(newLot);
+    runSyncWrite(saveCannabisLotToFirestore(newLot));
 
     // Update product stock
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === lotData.productId) {
           const newTotal = p.stockQuantity + lotData.initialWeightGrams;
-          return {
+          const updatedProd = {
             ...p,
             stockQuantity: newTotal,
+            status: newTotal > 0 && p.status === 'out_of_stock' ? 'available' : p.status,
             cannabisDetails: {
               ...p.cannabisDetails!,
               activeLotId: newLot.lotNumber,
               coaNumber: newLot.coaNumber,
             },
           };
+          runSyncWrite(saveProductToFirestore(updatedProd));
+          return updatedProd;
         }
         return p;
       })
@@ -1003,11 +1067,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (prodIndex > -1) {
         const prod = updatedProducts[prodIndex];
         const newQty = Math.max(0, prod.stockQuantity - cartItem.quantity);
-        updatedProducts[prodIndex] = {
+        const updatedStatus = newQty <= 0 ? 'out_of_stock' : prod.status;
+        const updatedProd = {
           ...prod,
           stockQuantity: newQty,
-          status: newQty <= 0 ? 'out_of_stock' : 'available',
+          status: updatedStatus,
         };
+        updatedProducts[prodIndex] = updatedProd;
+        runSyncWrite(saveProductToFirestore(updatedProd));
 
         // If Cannabis, deduct Lot weight
         if (prod.category === 'cannabis') {
@@ -1017,11 +1084,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (targetLotIndex > -1) {
             const lot = updatedLots[targetLotIndex];
             const newLotWeight = Math.max(0, lot.remainingWeightGrams - cartItem.quantity);
-            updatedLots[targetLotIndex] = {
+            const updatedLot = {
               ...lot,
               remainingWeightGrams: newLotWeight,
               status: newLotWeight <= 0 ? 'depleted' : newLotWeight < 10 ? 'low' : 'available',
             };
+            updatedLots[targetLotIndex] = updatedLot;
+            runSyncWrite(saveCannabisLotToFirestore(updatedLot));
           }
         }
 
@@ -1069,28 +1138,27 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })),
       };
       setKitchenOrders((prev) => [kOrder, ...prev]);
+      runSyncWrite(saveKitchenOrderToFirestore(kOrder));
     }
 
     // 3. Update Customer Points & Spend
     if (customer) {
       const addedPoints = Math.floor(netTotal / 50); // 1 point per 50 THB
+      const updatedCustomer = {
+        ...customer,
+        points: customer.points + addedPoints,
+        totalSpend: customer.totalSpend + netTotal,
+      };
       setCustomers((prev) =>
-        (prev || []).map((c) =>
-          c.id === customer.id
-            ? {
-                ...c,
-                points: c.points + addedPoints,
-                totalSpend: c.totalSpend + netTotal,
-              }
-            : c
-        )
+        (prev || []).map((c) => (c.id === customer.id ? updatedCustomer : c))
       );
+      runSyncWrite(saveCustomerToFirestore(updatedCustomer));
     }
 
     // 4. Save Order
     setOrders((prev) => [newOrder, ...prev]);
-    saveSaleToFirestore(newOrder);
-    newMovements.forEach((m) => saveStockMovementToFirestore(m));
+    runSyncWrite(saveSaleToFirestore(newOrder));
+    newMovements.forEach((m) => runSyncWrite(saveStockMovementToFirestore(m)));
 
     // 5. Audit Log
     addAuditLog(
@@ -1128,7 +1196,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           else if (anyPreparing) overallStatus = 'preparing';
 
           const updatedOrder = { ...order, items: updatedItems, overallStatus };
-          saveKitchenOrderToFirestore(updatedOrder);
+          runSyncWrite(saveKitchenOrderToFirestore(updatedOrder));
           return updatedOrder;
         }
         return order;
@@ -1157,6 +1225,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <POSContext.Provider
       value={{
         isCloudSynced,
+        isSyncing,
+        pendingSyncCount,
+        lastSyncTime,
+        syncError,
         isAuthenticated,
         login,
         logout,

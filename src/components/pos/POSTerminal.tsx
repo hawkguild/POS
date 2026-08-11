@@ -257,13 +257,15 @@ export const POSTerminal: React.FC = () => {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filteredProducts.map((product) => {
-                const isOutOfStock = product.stockQuantity <= 0;
+                const isOutOfStock = product.status === 'out_of_stock' || product.stockQuantity <= 0;
+                const isDisabled = product.status === 'disabled';
+                const isUnavailable = isOutOfStock || isDisabled;
 
                 return (
                   <div
                     key={product.id}
                     onClick={() => {
-                      if (isOutOfStock) return;
+                      if (isUnavailable) return;
                       if (product.category === 'cannabis') {
                         setSelectedCannabisProduct(product);
                         setSelectedLotId(product.cannabisDetails?.activeLotId || '');
@@ -272,8 +274,8 @@ export const POSTerminal: React.FC = () => {
                       }
                     }}
                     className={`group bg-white border rounded-2xl p-3 flex flex-col justify-between transition-all duration-200 cursor-pointer relative overflow-hidden shadow-xs ${
-                      isOutOfStock
-                        ? 'border-slate-200 opacity-50 cursor-not-allowed bg-slate-50'
+                      isUnavailable
+                        ? 'border-slate-200 opacity-60 cursor-not-allowed bg-slate-50'
                         : 'border-slate-200 hover:border-emerald-500/60 hover:shadow-md'
                     }`}
                   >
@@ -282,21 +284,27 @@ export const POSTerminal: React.FC = () => {
                       <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-semibold">
                         {product.code}
                       </span>
-                      {product.category === 'cannabis' && (
+                      {isDisabled ? (
+                        <span className="bg-slate-200 text-slate-700 border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                          ⚪ ระงับการขาย
+                        </span>
+                      ) : isOutOfStock ? (
+                        <span className="bg-rose-100 text-rose-800 border border-rose-200 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                          🔴 สินค้าหมด
+                        </span>
+                      ) : product.category === 'cannabis' ? (
                         <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-semibold">
                           THC {product.cannabisDetails?.thcPercent}%
                         </span>
-                      )}
-                      {product.category === 'kratom' && (
+                      ) : product.category === 'kratom' ? (
                         <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-1.5 py-0.5 rounded font-semibold">
                           Batch อย.
                         </span>
-                      )}
-                      {product.category === 'food' && (
+                      ) : product.category === 'food' ? (
                         <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-1.5 py-0.5 rounded font-semibold">
                           ครัวร้อน
                         </span>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Product Image & Info */}
@@ -346,9 +354,9 @@ export const POSTerminal: React.FC = () => {
                       </div>
 
                       <button
-                        disabled={isOutOfStock}
+                        disabled={isUnavailable}
                         className={`w-7 h-7 rounded-lg flex items-center justify-center transition shadow-xs ${
-                          isOutOfStock
+                          isUnavailable
                             ? 'bg-slate-100 text-slate-400'
                             : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         }`}

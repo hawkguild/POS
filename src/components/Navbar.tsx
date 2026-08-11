@@ -15,6 +15,7 @@ import {
   Info,
   Clock,
   LogOut,
+  RefreshCw,
   ShoppingCart,
   Leaf,
   Coffee,
@@ -39,7 +40,19 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
-  const { currentUser, setCurrentUser, users, shopSettings, resetToDemoData, logout, isCloudSynced } = usePOS();
+  const {
+    currentUser,
+    setCurrentUser,
+    users,
+    shopSettings,
+    resetToDemoData,
+    logout,
+    isCloudSynced,
+    isSyncing,
+    pendingSyncCount,
+    lastSyncTime,
+    syncError,
+  } = usePOS();
   const { activeTheme } = useTheme();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
@@ -126,13 +139,24 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
                   B.E. 2569 Compliant
                 </span>
-                {isCloudSynced ? (
-                  <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full border border-emerald-300 font-bold flex items-center gap-1 shadow-2xs">
+                {isSyncing ? (
+                  <span
+                    className="bg-sky-100 text-sky-800 text-[11px] px-2.5 py-0.5 rounded-full border border-sky-300 font-bold flex items-center gap-1.5 shadow-2xs animate-pulse"
+                    title={`กำลังซิงค์ข้อมูล ${pendingSyncCount} รายการลง Cloud Firestore...`}
+                  >
+                    <RefreshCw className="w-3 h-3 text-sky-600 animate-spin" />
+                    <span>กำลังซิงค์... ({pendingSyncCount})</span>
+                  </span>
+                ) : isCloudSynced ? (
+                  <span
+                    className="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full border border-emerald-300 font-bold flex items-center gap-1 shadow-2xs"
+                    title={lastSyncTime ? `ซิงค์กับ Firestore ล่าสุดเมื่อ ${lastSyncTime}` : 'เชื่อมต่อระบบ Cloud เรียบร้อย'}
+                  >
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    เชื่อมต่อแล้ว
+                    <span>เรียลไทม์ ซิงค์แล้ว</span>
                   </span>
                 ) : (
-                  <span className="bg-amber-100 text-amber-800 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 font-medium animate-pulse">
+                  <span className="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-0.5 rounded-full border border-amber-300 font-medium animate-pulse">
                     กำลังเชื่อมต่อ Cloud...
                   </span>
                 )}

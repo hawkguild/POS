@@ -16,12 +16,14 @@ import {
   FileSpreadsheet,
   Trash2,
   ImageIcon,
+  RefreshCw,
 } from 'lucide-react';
 import { AddEditProductModal } from './AddEditProductModal';
 
 export const InventoryManager: React.FC = () => {
-  const { products, deleteProduct, adjustStock, stockMovements, currentUser } = usePOS();
+  const { products, updateProduct, deleteProduct, adjustStock, stockMovements, currentUser, isSyncing, pendingSyncCount, lastSyncTime } = usePOS();
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | 'all'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'available' | 'out_of_stock' | 'disabled' | 'low_stock'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Add/Edit Product Modal State
@@ -33,12 +35,37 @@ export const InventoryManager: React.FC = () => {
   const [newQty, setNewQty] = useState<number>(0);
   const [reason, setReason] = useState('สินค้าเสียหาย/ชื้น');
 
+  // Status Counters
+  const totalCount = (products || []).length;
+  const availableCount = (products || []).filter((p) => p.status === 'available' && p.stockQuantity > 0).length;
+  const outOfStockCount = (products || []).filter((p) => p.status === 'out_of_stock' || p.stockQuantity <= 0).length;
+  const disabledCount = (products || []).filter((p) => p.status === 'disabled').length;
+  const lowStockCount = (products || []).filter(
+    (p) => p.status !== 'disabled' && p.status !== 'out_of_stock' && p.stockQuantity > 0 && p.stockQuantity < p.minStockAlert
+  ).length;
+
   const filteredProducts = (products || []).filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.code.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+
+    const isOut = p.status === 'out_of_stock' || p.stockQuantity <= 0;
+    const isDisabled = p.status === 'disabled';
+    const isLow = !isOut && !isDisabled && p.stockQuantity < p.minStockAlert;
+
+    let matchesStatus = true;
+    if (selectedStatus === 'available') {
+      matchesStatus = p.status === 'available' && p.stockQuantity > 0;
+    } else if (selectedStatus === 'out_of_stock') {
+      matchesStatus = isOut;
+    } else if (selectedStatus === 'disabled') {
+      matchesStatus = isDisabled;
+    } else if (selectedStatus === 'low_stock') {
+      matchesStatus = isLow;
+    }
+
+    return matchesCategory && matchesSearch && matchesStatus;
   });
 
   const handleOpenAddModal = () => {
@@ -103,6 +130,100 @@ export const InventoryManager: React.FC = () => {
         </button>
       </div>
 
+      {/* Optimistic Sync Indicator */}
+      {isSyncing ? (
+        <div className="bg-sky-50 border border-sky-200 text-sky-800 text-xs px-4 py-3 rounded-xl flex items-center justify-between font-medium shadow-2xs animate-pulse">
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-sky-600" />
+            <span>⚡ กำลังบันทึกการเปลี่ยนแปลงสต็อกและซิงค์ข้อมูลลง Firestore Cloud ({pendingSyncCount} รายการอยู่ระหว่างบันทึก)...</span>
+          </div>
+          <span className="text-[10px] bg-sky-200/80 text-sky-900 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+            Optimistic UI Active
+          </span>
+        </div>
+      ) : lastSyncTime ? (
+        <div className="bg-emerald-50/60 border border-emerald-200/60 text-emerald-800 text-[11px] px-3.5 py-1.5 rounded-xl flex items-center justify-between font-medium">
+          <span className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>สถานะคลังสินค้าและสต็อกปรับปรุงตรงกันกับ Cloud Firestore แล้ว</span>
+          </span>
+          <span className="text-emerald-600 text-[10px]">ซิงค์ล่าสุด: {lastSyncTime}</span>
+        </div>
+      ) : null}
+
+      {/* Status Summary & Filter Pills */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <button
+          onClick={() => setSelectedStatus('all')}
+          className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+            selectedStatus === 'all'
+              ? 'bg-slate-900 border-slate-900 text-white shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <span>ทั้งหมด</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedStatus === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700'}`}>
+            {totalCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus('available')}
+          className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+            selectedStatus === 'available'
+              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-emerald-50/50'
+          }`}
+        >
+          <span>🟢 พร้อมขาย</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedStatus === 'available' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+            {availableCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus('out_of_stock')}
+          className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+            selectedStatus === 'out_of_stock'
+              ? 'bg-rose-600 border-rose-600 text-white shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-rose-50/50'
+          }`}
+        >
+          <span>🔴 สินค้าหมด</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedStatus === 'out_of_stock' ? 'bg-rose-700 text-white' : 'bg-rose-100 text-rose-800'}`}>
+            {outOfStockCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus('disabled')}
+          className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+            selectedStatus === 'disabled'
+              ? 'bg-slate-600 border-slate-600 text-white shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <span>⚪ ระงับการขาย</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedStatus === 'disabled' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+            {disabledCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus('low_stock')}
+          className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+            selectedStatus === 'low_stock'
+              ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-amber-50/50'
+          }`}
+        >
+          <span>⚠️ สต็อกต่ำ</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedStatus === 'low_stock' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-800'}`}>
+            {lowStockCount}
+          </span>
+        </button>
+      </div>
+
       {/* Category Tabs & Search */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex bg-white p-1 rounded-xl border border-slate-200 text-xs shadow-xs">
@@ -114,7 +235,7 @@ export const InventoryManager: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            ทั้งหมด
+            หมวดหมู่ทั้งหมด
           </button>
           <button
             onClick={() => setSelectedCategory('cannabis')}
@@ -124,7 +245,7 @@ export const InventoryManager: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            🌿 กัญชา (Cannabis)
+            🌿 กัญชา
           </button>
           <button
             onClick={() => setSelectedCategory('kratom')}
@@ -134,7 +255,7 @@ export const InventoryManager: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            🥤 กระท่อม (Kratom)
+            🥤 กระท่อม
           </button>
           <button
             onClick={() => setSelectedCategory('food')}
@@ -144,7 +265,7 @@ export const InventoryManager: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            🍜 อาหาร (Food)
+            🍜 อาหาร
           </button>
           <button
             onClick={() => setSelectedCategory('general')}
@@ -188,8 +309,9 @@ export const InventoryManager: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.map((prod) => {
-                const isLow = prod.stockQuantity < prod.minStockAlert;
-                const isOut = prod.stockQuantity <= 0;
+                const isOut = prod.status === 'out_of_stock' || prod.stockQuantity <= 0;
+                const isDisabled = prod.status === 'disabled';
+                const isLow = !isOut && !isDisabled && prod.stockQuantity < prod.minStockAlert;
 
                 return (
                   <tr key={prod.id} className="hover:bg-slate-50 transition">
@@ -238,17 +360,27 @@ export const InventoryManager: React.FC = () => {
                       {prod.stockQuantity} {prod.stockUnit}
                     </td>
                     <td className="p-3 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isOut
-                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      <select
+                        value={prod.status || (isOut ? 'out_of_stock' : 'available')}
+                        onChange={(e) => {
+                          const newStatus = e.target.value as 'available' | 'out_of_stock' | 'disabled';
+                          updateProduct(prod.id, { status: newStatus });
+                        }}
+                        className={`px-2 py-1 rounded-xl text-[11px] font-bold border cursor-pointer focus:outline-none transition shadow-2xs ${
+                          isDisabled
+                            ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                            : isOut
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200'
                             : isLow
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
                         }`}
+                        title="ปรับเปลี่ยนสถานะสต็อกได้ทันที"
                       >
-                        {isOut ? 'หมด' : isLow ? 'สต็อกต่ำ' : 'ปกติ'}
-                      </span>
+                        <option value="available">🟢 พร้อมขาย {isLow ? '(สต็อกต่ำ)' : ''}</option>
+                        <option value="out_of_stock">🔴 สินค้าหมด (Out of stock)</option>
+                        <option value="disabled">⚪ ระงับการขาย (Disabled)</option>
+                      </select>
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
