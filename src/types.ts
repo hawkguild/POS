@@ -198,6 +198,20 @@ export interface StockMovement {
   userName: string;
 }
 
+export type TransactionType = 'income' | 'expense';
+
+export interface Expense {
+  id: string;
+  type?: TransactionType; // 'expense' or 'income'
+  title: string;
+  category: 'ingredient' | 'utility' | 'wage' | 'rent' | 'asset' | 'other_income' | 'other';
+  amount: number;
+  date: string;
+  recordedBy: string;
+  notes?: string;
+  receiptImage?: string;
+}
+
 export interface Customer {
   id: string;
   memberCode: string;

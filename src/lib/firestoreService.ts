@@ -24,6 +24,7 @@ import {
   AuditLog,
   ShopSettings,
   User,
+  Expense,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -33,6 +34,7 @@ import {
   INITIAL_KRATOM_BATCHES,
   INITIAL_PRODUCTS,
   INITIAL_CUSTOMERS,
+  INITIAL_EXPENSES,
 } from '../data/initialData';
 
 // Collection Names map matching user schema requirement
@@ -150,6 +152,11 @@ export async function seedFirestoreIfEmpty(): Promise<boolean> {
     // Seed Kratom Batches
     for (const batch of INITIAL_KRATOM_BATCHES) {
       await setDoc(doc(db, COLLECTIONS.PRODUCT_BATCHES, batch.id), sanitizeForFirestore(batch));
+    }
+
+    // Seed Expenses & Incomes
+    for (const exp of INITIAL_EXPENSES) {
+      await setDoc(doc(db, COLLECTIONS.EXPENSES, exp.id), sanitizeForFirestore(exp));
     }
 
     // Seed default categories
@@ -349,3 +356,35 @@ export async function deleteCustomerFromFirestore(customerId: string) {
     console.error('Failed to delete customer from Firestore:', err);
   }
 }
+
+export async function saveExpenseToFirestore(expense: Expense) {
+  try {
+    await setDoc(doc(db, COLLECTIONS.EXPENSES, expense.id), sanitizeForFirestore(expense));
+  } catch (err) {
+    console.error('Failed to save expense to Firestore:', err);
+  }
+}
+
+export async function deleteExpenseFromFirestore(expenseId: string) {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.EXPENSES, expenseId));
+  } catch (err) {
+    console.error('Failed to delete expense from Firestore:', err);
+  }
+}
+
+export async function resetAllSalesInFirestore(saleOrders: SaleOrder[]) {
+  try {
+    for (const order of saleOrders) {
+      await deleteDoc(doc(db, COLLECTIONS.SALES, order.id));
+      if (order.items) {
+        for (const item of order.items) {
+          await deleteDoc(doc(db, COLLECTIONS.SALE_ITEMS, `${order.id}_${item.id}`));
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to delete sales from Firestore:', err);
+  }
+}
+

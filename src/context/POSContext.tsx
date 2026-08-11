@@ -17,6 +17,7 @@ import {
   UserRole,
   PaymentBreakdown,
   BusinessCategory,
+  Expense,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -26,6 +27,7 @@ import {
   INITIAL_KRATOM_BATCHES,
   INITIAL_PRODUCTS,
   INITIAL_CUSTOMERS,
+  INITIAL_EXPENSES,
 } from '../data/initialData';
 import {
   seedFirestoreIfEmpty,
@@ -44,6 +46,9 @@ import {
   deleteUserFromFirestore,
   deleteSupplierFromFirestore,
   deleteCustomerFromFirestore,
+  saveExpenseToFirestore,
+  deleteExpenseFromFirestore,
+  resetAllSalesInFirestore,
   COLLECTIONS,
   OperationType,
   handleFirestoreError,
@@ -77,6 +82,12 @@ interface POSContextType {
   
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  addExpense: (expenseData: Omit<Expense, 'id'> & Partial<Expense>) => Expense;
+  updateExpense: (id: string, updated: Partial<Expense>) => void;
+  deleteExpense: (id: string) => boolean;
   
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number, lotNumber?: string, batchNo?: string) => void;
@@ -87,6 +98,7 @@ interface POSContextType {
   clearCart: () => void;
   
   orders: SaleOrder[];
+  resetAllSales: () => void;
   stockMovements: StockMovement[];
   kitchenOrders: KitchenOrder[];
   auditLogs: AuditLog[];
@@ -197,6 +209,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [kratomBatches, setKratomBatches] = useState<KratomBatch[]>(() => getStored('kratom_batches', INITIAL_KRATOM_BATCHES));
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => getStored('suppliers', INITIAL_SUPPLIERS));
   const [customers, setCustomers] = useState<Customer[]>(() => getStored('customers', INITIAL_CUSTOMERS));
+  const [expenses, setExpenses] = useState<Expense[]>(() => getStored('expenses', INITIAL_EXPENSES));
   const [cart, setCart] = useState<CartItem[]>(() => getStored('cart', []));
   const [orders, setOrders] = useState<SaleOrder[]>(() => getStored('orders', []));
   const [stockMovements, setStockMovements] = useState<StockMovement[]>(() => getStored('movements', []));
@@ -213,6 +226,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => saveStored('kratom_batches', kratomBatches), [kratomBatches]);
   useEffect(() => saveStored('suppliers', suppliers), [suppliers]);
   useEffect(() => saveStored('customers', customers), [customers]);
+  useEffect(() => saveStored('expenses', expenses), [expenses]);
   useEffect(() => saveStored('cart', cart), [cart]);
   useEffect(() => saveStored('orders', orders), [orders]);
   useEffect(() => saveStored('movements', stockMovements), [stockMovements]);
@@ -296,6 +310,20 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.USERS)
         );
         unsubscribes.push(unsubUsers);
+
+        // 5.5. Expenses & Income Records
+        const unsubExpenses = onSnapshot(
+          collection(db, COLLECTIONS.EXPENSES),
+          (snapshot) => {
+            const list = snapshot.docs.map((d) => d.data() as Expense);
+            if (list.length > 0 || snapshot.metadata.fromCache === false) {
+              setExpenses(list);
+              saveStored('expenses', list);
+            }
+          },
+          (err) => handleFirestoreError(err, OperationType.LIST, COLLECTIONS.EXPENSES)
+        );
+        unsubscribes.push(unsubExpenses);
 
         // 6. Sales/Orders
         const unsubSales = onSnapshot(
@@ -619,6 +647,58 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteCustomerFromFirestore(id);
     addAuditLog('DELETE_CUSTOMER', 'pos', `ลบสมาชิก: ${target?.name || id}`);
     return true;
+  };
+
+  // Expense & Income Operations
+  const addExpense = (expenseData: Omit<Expense, 'id'> & Partial<Expense>): Expense => {
+    const newExpense: Expense = {
+      id: 'exp-' + Date.now(),
+      type: expenseData.type || 'expense',
+      title: expenseData.title || 'รายการไม่ระบุชื่อ',
+      category: expenseData.category || 'other',
+      amount: Number(expenseData.amount) || 0,
+      date: expenseData.date || new Date().toISOString().split('T')[0],
+      recordedBy: expenseData.recordedBy || currentUser?.name || 'ผู้จัดการร้าน',
+      notes: expenseData.notes || '',
+      receiptImage: expenseData.receiptImage || '',
+      ...expenseData,
+    };
+    setExpenses((prev) => [newExpense, ...(prev || [])]);
+    saveExpenseToFirestore(newExpense);
+    addAuditLog('ADD_EXPENSE', 'settings', `บันทึก${newExpense.type === 'income' ? 'รายรับ' : 'รายจ่าย'}: ${newExpense.title} (${newExpense.amount} บาท)`);
+    return newExpense;
+  };
+
+  const updateExpense = (id: string, updated: Partial<Expense>) => {
+    setExpenses((prev) =>
+      (prev || []).map((e) => {
+        if (e.id === id) {
+          const updatedExp = { ...e, ...updated };
+          saveExpenseToFirestore(updatedExp);
+          return updatedExp;
+        }
+        return e;
+      })
+    );
+    addAuditLog('UPDATE_EXPENSE', 'settings', `แก้ไขรายการรายรับ/รายจ่าย ID: ${id}`);
+  };
+
+  const deleteExpense = (id: string): boolean => {
+    const target = (expenses || []).find((e) => e.id === id);
+    setExpenses((prev) => (prev || []).filter((e) => e.id !== id));
+    deleteExpenseFromFirestore(id);
+    addAuditLog('DELETE_EXPENSE', 'settings', `ลบรายการ: ${target?.title || id}`);
+    return true;
+  };
+
+  const resetAllSales = () => {
+    const currentOrders = [...(orders || [])];
+    setOrders([]);
+    saveStored('orders', []);
+    setKitchenOrders([]);
+    saveStored('kitchen', []);
+    resetAllSalesInFirestore(currentOrders);
+    addAuditLog('RESET_SALES', 'pos', 'รีเซ็ทยอดขายทั้งหมดให้เป็น 0');
   };
 
   // Cart Operations
@@ -1107,6 +1187,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        expenses,
+        setExpenses,
+        addExpense,
+        updateExpense,
+        deleteExpense,
         cart,
         addToCart,
         removeFromCart,
@@ -1115,6 +1200,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCartNotes,
         clearCart,
         orders,
+        resetAllSales,
         stockMovements,
         kitchenOrders,
         auditLogs,

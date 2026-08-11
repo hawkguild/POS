@@ -1,4 +1,4 @@
-import { Product, CannabisLot, KratomBatch, Supplier, Customer, ShopSettings, User } from '../types';
+import { Product, CannabisLot, KratomBatch, Supplier, Customer, ShopSettings, User, Expense } from '../types';
 
 export const INITIAL_USERS: User[] = [
   { id: 'usr-admin', name: 'ผู้ดูแลระบบ (Admin)', username: 'admin', password: 'P@ssw0rd', role: 'super_admin', pin: '8888', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80' },
@@ -486,5 +486,48 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     points: 150,
     totalSpend: 4800,
     registeredDate: '2026-03-10',
+  },
+];
+
+export const INITIAL_EXPENSES: Expense[] = [
+  {
+    id: 'exp-1',
+    type: 'expense',
+    title: 'ค่าไฟฟ้าประจำเดือนประจำสาขา',
+    category: 'utility',
+    amount: 4800,
+    date: '2026-08-01',
+    recordedBy: 'สมชาย ผู้จัดการร้าน',
+    notes: 'ชำระผ่าน Krungthai Corporate Online',
+  },
+  {
+    id: 'exp-2',
+    type: 'expense',
+    title: 'ซื้อวัตถุดิบใบกระท่อมสดก้านแดง (50 kg)',
+    category: 'ingredient',
+    amount: 12500,
+    date: '2026-08-03',
+    recordedBy: 'ศักดิ์ คลังสินค้า',
+    notes: 'รับจากสหกรณ์สุราษฎร์ฯ ใบรับสินค้า SUP-KTM-02',
+  },
+  {
+    id: 'exp-3',
+    type: 'expense',
+    title: 'ค่าจ้างพนักงานพาร์ทไทม์แคชเชียร์ช่วงวันหยุด',
+    category: 'wage',
+    amount: 3500,
+    date: '2026-08-05',
+    recordedBy: 'สมชาย ผู้จัดการร้าน',
+    notes: 'ค่าแรง 2 คน รวม 5 วัน',
+  },
+  {
+    id: 'exp-4',
+    type: 'income',
+    title: 'รายรับจากการขายเศษวัสดุบรรจุภัณฑ์รีไซเคิล',
+    category: 'other_income',
+    amount: 1200,
+    date: '2026-08-08',
+    recordedBy: 'สมชาย ผู้จัดการร้าน',
+    notes: 'ขายลังกระดาษและกล่องพลาสติกเก่า',
   },
 ];
